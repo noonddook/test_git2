@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>요청이력조회 - The 채움+</title>
+
+    <!-- 공통 CSS 링크 -->
+    <link rel="stylesheet" th:href="@{/css/base.css}">
+    <link rel="stylesheet" th:href="@{/css/layout.css}">
+    <link rel="stylesheet" th:href="@{/css/components.css}">
+    <!-- 이 페이지 전용 CSS 링크 -->
+    <link rel="stylesheet" th:href="@{/css/pages/FWD_transaction_history.css}">
+</head>
+
+<body>
+<div class="container">
+    <div th:replace="~{fragments/CUS_sidebar :: cusSidebarFragment(activeMenu='cusHistory')}"></div>
+    <main class="main-content">
+        <div th:replace="~{fragments/header :: headerFragment}"></div>
+        <section class="content">
+            <h2 class="page-title">요청이력조회</h2>
+
+            <div class="controls-bar">
+                </div>
+
+            <div class="table-container">
+                <table class="data-table transaction-table">
+                    <thead>
+                        <tr>
+                            <th>거래일</th>
+                            <th>품명</th>
+                            <th>담당 포워더</th>
+                            <th>확정 운임</th>
+                            <th>최종 상태</th>
+                            <th>관리</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:if="${historyPage.empty}">
+                            <td colspan="6" style="text-align: center;">거래 이력이 없습니다.</td>
+                        </tr>
+                        <tr th:each="tx : ${historyPage.content}">
+                            <td th:text="${#temporals.format(tx.transactionDate, 'yyyy. M. d.')}"></td>
+                            <td th:text="${tx.itemName}"></td>
+                            <td th:text="${tx.partnerName}"></td>
+                            <td th:text="${#numbers.formatDecimal(tx.price, 0, 'COMMA', 2, 'POINT')} + ' ' + ${tx.currency}"></td>
+                            <td>
+                                <span class="status-badge" 
+                                      th:text="${tx.status}" 
+                                      th:classappend="${tx.status.toLowerCase()}"></span>
+                            </td>
+                            <td><button class="btn btn-sm btn-details" disabled>상세보기</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pagination-container" th:if="${!historyPage.empty}">
+                <nav th:with="page=${historyPage}">
+                     <ul class="pagination">
+                         <li th:classappend="${page.first} ? 'disabled'"><a th:href="@{/cus/cusHistory(page=0)}">«</a></li>
+                         <li th:classappend="${!page.hasPrevious()} ? 'disabled'"><a th:href="@{/cus/cusHistory(page=${page.number-1})}">‹</a></li>
+                         <li th:each="i : ${#numbers.sequence(0, page.totalPages - 1)}" th:if="${i >= page.number - 2 && i <= page.number + 2}" th:classappend="${i == page.number} ? 'active'"><a th:href="@{/cus/cusHistory(page=${i})}" th:text="${i + 1}"></a></li>
+                         <li th:classappend="${!page.hasNext()} ? 'disabled'"><a th:href="@{/cus/cusHistory(page=${page.number+1})}">›</a></li>
+                         <li th:classappend="${page.last} ? 'disabled'"><a th:href="@{/cus/cusHistory(page=${page.totalPages - 1})}">»</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </section>
+    </main>
+</div>
+</body>
+</html>

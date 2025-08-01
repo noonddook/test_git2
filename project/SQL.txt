@@ -1,0 +1,97 @@
+
+use dima5;
+
+-- 1. 사용자(users) 테이블
+CREATE TABLE users (
+    user_seq INT AUTO_INCREMENT PRIMARY KEY,
+    provider VARCHAR(50) NOT NULL DEFAULT 'local',
+    provider_id VARCHAR(100),
+    email VARCHAR(255) NOT NULL UNIQUE,
+    user_name VARCHAR(100) NOT NULL,
+    company_name VARCHAR(100),
+    user_id VARCHAR(50) UNIQUE,
+    user_pwd VARCHAR(255),
+    phone_num VARCHAR(20),
+    business_num VARCHAR(20),
+    business_license_orig_name VARCHAR(255),
+    business_license_saved_name VARCHAR(255),
+    roles VARCHAR(50) NOT NULL,
+    create_date DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 2. 화물(cargo) 테이블 (수정됨)
+CREATE TABLE cargo (
+    cargo_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    owner_id INT NOT NULL COMMENT '화물의 원 소유자 (최초 화주)',
+    item_name VARCHAR(255) NOT NULL,
+    incoterms VARCHAR(10) NOT NULL,
+    total_cbm DECIMAL(10, 4) NOT NULL,
+    is_dangerous BOOLEAN NOT NULL DEFAULT FALSE,
+    FOREIGN KEY (owner_id) REFERENCES users(user_seq) ON DELETE CASCADE
+);
+
+-- 3. 컨테이너(container) 테이블
+CREATE TABLE container (
+    container_id VARCHAR(30) PRIMARY KEY,
+    forwarder_id INT NOT NULL,
+    departure_port VARCHAR(100) NOT NULL,
+    arrival_port VARCHAR(100) NOT NULL,
+    etd DATE NOT NULL,
+    eta DATE NOT NULL,
+    size VARCHAR(10) NOT NULL,
+    capacity_cbm DECIMAL(10, 2) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'SCHEDULED',
+    FOREIGN KEY (forwarder_id) REFERENCES users(user_seq) ON DELETE CASCADE
+);
+
+-- 4. 운송 요청(request) 테이블 (수정)
+-- 화물을 운송해달라는 '요청 행위'를 저장합니다. 화주 또는 포워더가 요청자가 될 수 있습니다.
+CREATE TABLE request (
+    request_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    cargo_id BIGINT NOT NULL COMMENT '어떤 화물에 대한 요청인지',
+    requester_id INT NOT NULL COMMENT '요청을 올린 사용자 (화주 또는 재판매 포워더)',
+    departure_port VARCHAR(100) NOT NULL,
+    arrival_port VARCHAR(100) NOT NULL,
+    deadline DATETIME NOT NULL,
+    trade_type VARCHAR(10) NOT NULL,
+    transport_type VARCHAR(10) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'OPEN' COMMENT 'OPEN, CLOSED',
+    -- [중요] 재판매 요청의 근원을 추적하기 위한 컬럼
+    source_offer_id BIGINT NULL COMMENT '이 요청이 재판매라면, 어떤 offer로부터 파생되었는지',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (cargo_id) REFERENCES cargo(cargo_id),
+    FOREIGN KEY (requester_id) REFERENCES users(user_seq),
+    -- FOREIGN KEY (source_offer_id) REFERENCES offer(offer_id), -- offer 테이블 생성 후 추가
+    INDEX idx_request_status_deadline (status, deadline)
+);
+
+ALTER TABLE request ADD CONSTRAINT fk_request_source_offer FOREIGN KEY (source_offer_id) REFERENCES offer(offer_id);
+
+-- 5. 제안/입찰(offer) 테이블 (동일)
+-- request에 대해 포워더가 제안하는 행위
+CREATE TABLE offer (
+    offer_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    request_id BIGINT NOT NULL,
+    container_id VARCHAR(30) NOT NULL,
+    forwarder_id INT NOT NULL COMMENT '제안한 포워더 ID',
+    price DECIMAL(19, 4) NOT NULL,
+    currency VARCHAR(3) NOT NULL DEFAULT 'USD',
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING, ACCEPTED, REJECTED',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (request_id) REFERENCES request(request_id),
+    FOREIGN KEY (container_id) REFERENCES container(container_id),
+    FOREIGN KEY (forwarder_id) REFERENCES users(user_seq)
+);
+
+CREATE TABLE container_cargo (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    container_id VARCHAR(30) NOT NULL COMMENT '어느 컨테이너에 실렸는지',
+    offer_id BIGINT NULL COMMENT '플랫폼 내 거래일 경우, 근원이 되는 offer ID',
+    cbm_loaded DECIMAL(10, 4) NOT NULL COMMENT '실제 적재된 CBM',
+    is_external BOOLEAN NOT NULL DEFAULT FALSE COMMENT '외부 거래 서류 등록 건 여부',
+    external_cargo_name VARCHAR(255) NULL COMMENT '외부 거래 화물 이름',
+    added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (container_id) REFERENCES container(container_id),
+    FOREIGN KEY (offer_id) REFERENCES offer(offer_id),
+    INDEX idx_cc_container(container_id)
+);

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>거래내역 - The 채움+</title>
+    <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/layout.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/pages/FWD_transaction_history.css">
+</head>
+
+<body>
+    <div class="container">
+		<div th:replace="~{fragments/sidebar :: sidebarFragment(activeMenu='fwdRequest')}"></div>
+        
+        <main class="main-content">
+        
+		<!-- 상단 헤더부분 fragment로 대체함. -->
+		<div th:replace="~{fragments/header :: headerFragment}"></div>
+
+            <!-- 이 페이지의 고유한 콘텐츠 -->
+            <section class="content">
+                <h2 class="page-title">거래내역 조회</h2>
+
+                <div class="controls-bar">
+                    <div class="control-group filter-group" id="transaction-filter-group">
+                        <button class="btn btn-filter is-active" data-filter="all">전체</button>
+                        <button class="btn btn-filter" data-filter="sale">나의 판매</button>
+                        <button class="btn btn-filter" data-filter="purchase">나의 구매</button>
+                    </div>
+                    <!-- 추후 기간 필터 등을 위한 공간 -->
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table transaction-table">
+                        <thead>
+                            <tr>
+                                <th>거래일</th>
+                                <th>거래 유형</th>
+                                <th>품명</th>
+                                <th>거래 상대방</th>
+                                <th>거래 금액</th>
+                                <th>상태</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transaction-list-body">
+                            <!-- JS로 동적으로 생성 -->
+                        </tbody>
+                        
+                    </table>
+                </div>
+
+                <div class="pagination-container"></div>
+            </section>
+        </main>
+    </div>
+
+    <!-- 공통 레이아웃 로더 -->
+    <script th:src="@{/js/layoutloader.js}"></script>
+    <!-- 페이지 전용 스크립트 -->
+    <script th:src="@{/js/FWD_transaction_history.js}" type="module"></script>
+</body>
+
+</html>

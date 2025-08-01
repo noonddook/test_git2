@@ -1,0 +1,70 @@
+<!-- /templates/adm/ADM_total.html -->
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>관리자 대시보드 - 물동량 조회</title>
+
+    <!-- FWD_request.html과 동일한 공통 CSS 링크 -->
+    <link rel="stylesheet" th:href="@{/css/base.css}">
+    <link rel="stylesheet" th:href="@{/css/layout.css}">
+    <link rel="stylesheet" th:href="@{/css/components.css}">
+    <!-- 관리자 페이지 전용 CSS -->
+    <link rel="stylesheet" th:href="@{/css/pages/ADM_total.css}">
+
+    <!-- [중요] Chart.js 라이브러리 로드 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <div class="container">
+
+        <!-- [임시] 관리자 전용 사이드바 (추후 fragments/ADM_sidebar.html 등으로 분리 가능) -->
+        <aside class="sidebar">
+            <div class="profile">
+                <div class="logo-circle"></div>
+                <!-- 로그인 정보 연동 시 sec:authentication="name" 사용 -->
+                <p>SeAir_ADMIN</p>
+            </div>
+            <nav class="menu">
+                <ul>
+                    <li class="menu-item is-active"><a th:href="@{/adm/total}">물동량조회</a></li>
+                    <li class="menu-item"><a href="#">포워더관리</a></li>
+                    <li class="menu-item"><a href="#">유저관리</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <!-- FWD_request.html과 동일한 헤더 프래그먼트 호출 -->
+            <div th:replace="~{fragments/header :: headerFragment}"></div>
+
+            <section class="content">
+                <div class="page-header">
+                    <h2 class="page-title">물동량조회</h2>
+                </div>
+
+                <!-- 차트가 렌더링될 캔버스 영역 -->
+                <div class="chart-container">
+                    <canvas id="cbmChart"></canvas>
+                </div>
+
+                <!-- 상세보기 버튼들을 담는 컨테이너 -->
+                <div class="details-button-container">
+                    <a href="#" class="btn btn-details">상세보기</a>
+                    <a href="#" class="btn btn-details">상세보기</a>
+                    <a href="#" class="btn btn-details">상세보기</a>
+                    <a href="#" class="btn btn-details">상세보기</a>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- 이 페이지 전용 스크립트 파일 -->
+    <script th:src="@{/js/ADM_total.js}"></script>
+
+</body>
+
+</html>

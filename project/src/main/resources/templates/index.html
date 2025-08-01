@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://thymeleaf.org" xmlns:sec="http://thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>메인화면</title>
+    <link rel="stylesheet" th:href="@{/css/login.css}">
+    <style>
+        div>#login-btn {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        div>#login-btn:hover {
+            filter: brightness(0.95);
+        }
+        
+
+    </style>
+</head>
+
+<body>
+    <main>
+        <!-- 로그인 링크 -->
+        <div class="signup-link">
+            <a href="/login" id="login-btn" class="btn btn-primary">로그인창으로 이동</a>
+        </div>
+    </main>
+</body>
+
+</html>

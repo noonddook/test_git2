@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>나의요청 관리 - The 채움+</title>
+    <link rel="stylesheet" th:href="@{/css/base.css}">
+    <link rel="stylesheet" th:href="@{/css/layout.css}">
+    <link rel="stylesheet" th:href="@{/css/components.css}">
+    <link rel="stylesheet" th:href="@{/css/pages/FWD_my_posted_requests.css}"> 
+    <link rel="stylesheet" th:href="@{/css/pages/CUS_request.css}">
+</head>
+<body>
+<div class="container">
+    <div th:replace="~{fragments/CUS_sidebar :: cusSidebarFragment(activeMenu='cusRequest')}"></div>
+    <main class="main-content">
+        <div th:replace="~{fragments/header :: headerFragment}"></div>
+        <section class="content">
+            <div id="view-container">
+                <div id="list-view">
+                    <h2 class="page-title">나의요청 관리</h2>
+                    <div class="controls-bar">
+					    <div class="filter-group">
+					        <a th:href="@{/cus/cusRequest(status=null)}" class="btn" th:classappend="${status == null} ? 'is-active'">전체</a>
+					        <a th:href="@{/cus/cusRequest(status='OPEN')}" class="btn" th:classappend="${status == 'OPEN'} ? 'is-active'">제안받는중</a>
+					        <a th:href="@{/cus/cusRequest(status='ACCEPTED')}" class="btn" th:classappend="${status == 'ACCEPTED'} ? 'is-active'">낙찰</a>
+					        <a th:href="@{/cus/cusRequest(status='CONFIRMED')}" class="btn" th:classappend="${status == 'CONFIRMED'} ? 'is-active'">확정</a>
+					        <a th:href="@{/cus/cusRequest(status='SHIPPED')}" class="btn" th:classappend="${status == 'SHIPPED'} ? 'is-active'">선적</a>
+					        <a th:href="@{/cus/cusRequest(status='COMPLETED')}" class="btn" th:classappend="${status == 'COMPLETED'} ? 'is-active'">도착</a>
+					    </div>
+					</div>
+                    <div class="posted-request-list">
+                        <div th:if="${requestPage.empty}" class="no-results-message">등록된 요청이 없습니다. 우측 하단 버튼으로 새 요청을 등록해보세요.</div>
+                        <article class="card request-card" th:each="req : ${requestPage.content}" th:attr="data-request-id=${req.requestId}">
+                            <div class="info">
+                                <h3 class="item-name" th:text="${req.itemName}"></h3>
+                                <p class="cbm" th:text="${#numbers.formatDecimal(req.cbm, 2, 'COMMA', 2, 'POINT')} + ' CBM'"></p>
+                                <p class="deadline" th:text="'마감: ' + ${req.deadline}"></p>
+                            </div>
+                            <div class="actions">
+                                <div th:if="${req.status == 'OPEN'}" class="actions-open">
+                                    <span class="bidder-count" th:text="'제안 ' + ${req.bidderCount} + '건 도착'"></span>
+                                    <button class="btn btn-sm btn-details">제안 보기</button>
+                                </div>
+                                <div th:if="${req.status == 'CLOSED'}" class="actions-closed">
+                                    <div class="progress-tracker">
+                                        <div class="step" th:classappend="${#lists.contains({'ACCEPTED','CONFIRMED','SHIPPED','COMPLETED','RESOLD'}, req.detailedStatus)} ? 'is-complete' : ''"><div class="dot"></div><div class="label">낙찰</div></div>
+                                        <div class="step" th:classappend="${#lists.contains({'CONFIRMED','SHIPPED','COMPLETED'}, req.detailedStatus)} ? 'is-complete' : ''"><div class="dot"></div><div class="label">컨테이너 확정</div></div>
+                                        <div class="step" th:classappend="${#lists.contains({'SHIPPED','COMPLETED'}, req.detailedStatus)} ? 'is-complete' : ''"><div class="dot"></div><div class="label">선적완료</div></div>
+                                        <div class="step" th:classappend="${#lists.contains({'COMPLETED'}, req.detailedStatus)} ? 'is-complete' : ''"><div class="dot"></div><div class="label">운송완료</div></div>
+                                    </div>
+                                    <div class="winner-info">
+                                        <span class="label">담당 포워더 : </span>
+                                        <span class="company-name" th:text="${req.winningBidderCompanyName}"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+                    <div class="pagination-container" th:if="${!requestPage.empty}">
+                        <nav th:with="page=${requestPage}">
+                             <ul class="pagination">
+                                 <li th:classappend="${page.first} ? 'disabled'"><a th:href="@{/cus/cusRequest(page=0)}">«</a></li>
+                                 <li th:classappend="${!page.hasPrevious()} ? 'disabled'"><a th:href="@{/cus/cusRequest(page=${page.number-1})}">‹</a></li>
+                                 <li th:each="i : ${#numbers.sequence(0, page.totalPages - 1)}" th:if="${i >= page.number - 2 && i <= page.number + 2}" th:classappend="${i == page.number} ? 'active'"><a th:href="@{/cus/cusRequest(page=${i})}" th:text="${i + 1}"></a></li>
+                                 <li th:classappend="${!page.hasNext()} ? 'disabled'"><a th:href="@{/cus/cusRequest(page=${page.number+1})}">›</a></li>
+                                 <li th:classappend="${page.last} ? 'disabled'"><a th:href="@{/cus/cusRequest(page=${page.totalPages - 1})}">»</a></li>
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+                <div id="detail-view" style="display: none;"></div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<button id="open-request-modal" class="fab">+</button>
+
+<div id="request-modal" class="modal-wrapper">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>신규 화물 요청</h3>
+            <button class="btn-close">×</button>
+        </div>
+        <form id="new-request-form">
+            <div class="modal-body">
+                <h4>화물 정보</h4>
+                <div class="form-grid">
+                    <input type="text" id="itemName" class="form-input" placeholder="품명 (예: 자동차 부품)" required>
+                    <select id="incoterms" class="form-input"><option value="FOB">FOB</option><option value="CIF">CIF</option></select>
+                    <input type="number" id="totalCbm" class="form-input" placeholder="총 CBM (예: 15.5)" step="0.01" required>
+                    <label style="display:flex; align-items:center; gap: 8px;"><input type="checkbox" id="isDangerous"> 위험물 포함</label>
+                </div>
+                <h4>운송 정보</h4>
+                <div class="form-grid">
+                    <input type="text" id="departurePort" class="form-input" placeholder="출발항 (예: 부산)" required>
+                    <input type="text" id="arrivalPort" class="form-input" placeholder="도착항 (예: 도쿄)" required>
+                    <input type="datetime-local" id="deadline" class="form-input" required>
+                    <select id="tradeType" class="form-input"><option value="수출">수출</option><option value="수입">수입</option></select>
+                    <select id="transportType" class="form-input"><option value="해상">해상</option><option value="항공">항공</option></select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-cancel">취소</button>
+                <button type="submit" class="btn btn-primary">등록하기</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script th:src="@{/js/CUS_request.js}"></script>
+</body>
+</html>

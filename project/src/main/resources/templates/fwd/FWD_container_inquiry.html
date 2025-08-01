@@ -85,8 +85,11 @@
                                     <button th:if="${c.status.name() == 'SHIPPED'}"
                                         class="btn btn-sm btn-success btn-complete-shipment"
                                         th:attr="data-container-id=${c.containerId}">운송완료</button>
-                                    <span th:if="${c.status.name() == 'COMPLETED'}"
-                                        class="status-badge completed">운송완료</span>
+									<button th:if="${c.status.name() == 'COMPLETED'}"
+									        class="btn btn-sm btn-success btn-settle-container"
+									        th:attr="data-container-id=${c.containerId}">정산완료</button>
+									<span th:if="${c.status.name() == 'SETTLED'}"
+									      class="status-badge settled">정산완료</span>
                                 </th:block>
 
                                 <button th:if="${c.status.name() == 'SCHEDULED'}"

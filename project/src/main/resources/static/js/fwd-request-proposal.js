@@ -12,7 +12,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeOpenOfferForm = () => {
         const openForm = document.querySelector('.offer-form-expand');
         if (openForm) {
-            const card = openForm.closest('.request-item-container');
+            // 폼의 이전 형제 요소인 카드를 찾습니다.
+            const card = openForm.previousElementSibling;
             if (card?.classList.contains('is-expanded')) {
                 card.classList.remove('is-expanded');
             }
@@ -28,23 +29,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const card = quoteButton.closest('.request-card');
-        const itemContainer = card.closest('.request-item-container');
+        if (!card) return;
         
-        // ★★★ 핵심 수정: 내가 올린 재판매 요청 버튼이면 아무것도 하지 않고 즉시 종료 ★★★
         const requesterId = card.dataset.requesterId;
-        if (requesterId === currentUserId) {
+        const isDisabled = quoteButton.disabled;
+
+        if (isDisabled || requesterId === currentUserId) {
             return; 
         }
 
-        if (quoteButton.disabled) {
-            // 이미 제안완료된 버튼을 클릭했을 때의 로직 (필요 시 추가)
-            // 현재는 disabled 상태이므로 클릭 이벤트가 거의 발생하지 않음
-            return;
-        }
-        
-        if (!itemContainer) return;
-
-        if (itemContainer.classList.contains('is-expanded')) {
+        // ★★★ 핵심 수정: 'itemContainer' 대신 'card'를 직접 사용합니다 ★★★
+        if (card.classList.contains('is-expanded')) {
             closeOpenOfferForm();
             return;
         }
@@ -56,7 +51,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const requestDeadlineString = card.dataset.deadlineDatetime.substring(0, 10);
 
         try {
-            itemContainer.classList.add('is-expanded');
+            // ★★★ 핵심 수정: 'card'에 직접 클래스를 추가합니다 ★★★
+            card.classList.add('is-expanded');
             
             const response = await fetch(`/api/fwd/available-containers?requestId=${requestId}`);
             if (!response.ok) throw new Error('서버에서 컨테이너 목록을 가져오는데 실패했습니다.');
@@ -147,8 +143,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Fetch error:', error);
             alert(error.message);
-            const itemContainer = card.closest('.request-item-container');
-            if(itemContainer) itemContainer.classList.remove('is-expanded');
+            // 에러 발생 시 펼침 상태 제거
+            if(card) card.classList.remove('is-expanded');
         }
     });
 });

@@ -89,7 +89,24 @@ public interface OfferRepository extends JpaRepository<OfferEntity, Long>, JpaSp
     // [✅ 추가] 특정 사용자가 제안자이고, 주어진 상태 목록에 포함되는 제안들 조회
     List<OfferEntity> findByForwarderAndStatusIn(UserEntity forwarder, List<OfferStatus> statuses);
     
+    @Query("SELECT o FROM OfferEntity o " +
+    	       "JOIN FETCH o.request r " +
+    	       "JOIN FETCH r.cargo c " +
+    	       "WHERE o.container.containerId IN :containerIds")
+    	List<OfferEntity> findAllByContainer_ContainerIdIn(@Param("containerIds") List<String> containerIds);
     
+    
+ // OfferRepository 인터페이스에 아래 메서드 선언을 추가하세요.
+    @Query("SELECT o FROM OfferEntity o " +
+           "JOIN FETCH o.request r " +
+           "JOIN FETCH r.cargo c " +
+           "WHERE o.container.containerId = :containerId " +
+           "AND o.status = :status " +
+           "AND o.forwarder = :forwarder")
+    List<OfferEntity> findDetailsByContainerAndStatusWithAllDetails(
+            @Param("containerId") String containerId,
+            @Param("status") OfferStatus status,
+            @Param("forwarder") UserEntity forwarder);
     
 
 }

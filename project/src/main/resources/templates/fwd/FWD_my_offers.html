@@ -38,8 +38,6 @@
 				           class="btn" th:classappend="${status == 'PENDING'} ? 'is-active'">진행중</a>
 				        <a th:href="@{/fwd/my-offers(status=${status == 'FOR_SALE' ? null : 'FOR_SALE'}, keyword=${keyword}, sort=${param.sort})}"
 				           class="btn" th:classappend="${status == 'FOR_SALE'} ? 'is-active'">재판매중</a>
-				        <a th:href="@{/fwd/my-offers(status=${status == 'RESOLD' ? null : 'RESOLD'}, keyword=${keyword}, sort=${param.sort})}"
-				           class="btn" th:classappend="${status == 'RESOLD'} ? 'is-active'">재판매 완료</a>
 				    </div>
 				    <form th:action="@{/fwd/my-offers}" method="get" class="search-group">
 				        <input type="hidden" name="status" th:value="${status}">
@@ -53,7 +51,8 @@
 				    <div th:if="${myOffersPage.empty}" class="no-results-message">
 				        조회된 제안 내역이 없습니다.
 				    </div>
-				    <article class="card offer-card" th:each="offer : ${myOffersPage.content}">
+				    <article class="card offer-card" th:each="offer : ${myOffersPage.content}"
+         th:classappend="${offer.isFullySettled} ? 'is-settled' : ''">
 				        <div class="card-summary">
 				            <div class="info">
 				                <span class="request-id-label" th:text="${offer.requestIdLabel}"></span>

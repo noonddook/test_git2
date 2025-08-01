@@ -42,15 +42,22 @@ public class TransactionHistoryService {
         List<RequestEntity> myResaleRequests = requestRepository.findByRequesterAndStatusAndSourceOfferIsNotNull(user, RequestStatus.CLOSED);
 
         return myResaleRequests.stream().map(req -> {
-            // [✅ 핵심 수정] ResaleService와 동일한 로직으로 낙찰된 제안을 찾습니다.
+            // 각 재판매 요청의 낙찰된 제안을 찾습니다.
             OfferEntity winningOffer = offerRepository.findAllByRequest(req)
                     .stream()
                     .filter(o -> o.getStatus() != OfferStatus.PENDING && o.getStatus() != OfferStatus.REJECTED)
                     .findFirst()
-                    .orElse(null); // 낙찰 제안이 없으면 null
+                    .orElse(null);
 
             if (winningOffer == null) return null;
 
+            // ★★★ 핵심 수정 ★★★
+            // 해당 제안이 실린 컨테이너의 상태가 'SETTLED'가 아니면 거래내역에 포함하지 않습니다.
+            if (winningOffer.getContainer().getStatus() != ContainerStatus.SETTLED) {
+                return null;
+            }
+
+            // 'SETTLED' 상태인 경우에만 DTO로 변환하여 반환합니다.
             return TransactionHistoryDto.builder()
                     .transactionDate(winningOffer.getCreatedAt())
                     .type("판매")
@@ -58,7 +65,7 @@ public class TransactionHistoryService {
                     .partnerName(winningOffer.getForwarder().getCompanyName())
                     .price(winningOffer.getPrice())
                     .currency(winningOffer.getCurrency())
-                    .status(winningOffer.getContainer().getStatus().name())
+                    .status("정산완료") // 상태를 '정산완료'로 고정
                     .build();
         }).filter(dto -> dto != null).collect(Collectors.toList());
     }
@@ -74,17 +81,22 @@ public class TransactionHistoryService {
         		,OfferStatus.COMPLETED);
         List<OfferEntity> myPurchases = offerRepository.findByForwarderAndStatusIn(user, completedStatuses);
 
-        return myPurchases.stream().map(offer -> 
-        TransactionHistoryDto.builder()
-                .transactionDate(offer.getCreatedAt())
-                .type("구매")
-                .itemName(offer.getRequest().getCargo().getItemName())
-                .partnerName(offer.getRequest().getRequester().getCompanyName())
-                .price(offer.getPrice())
-                .currency(offer.getCurrency())
-                .status(offer.getContainer().getStatus().name())
-                .build()
-        		).collect(Collectors.toList());
+
+        return myPurchases.stream()
+                // ★★★ 핵심 수정 1: 컨테이너 상태가 'SETTLED'인 거래만 필터링합니다. ★★★
+                .filter(offer -> offer.getContainer() != null && offer.getContainer().getStatus() == ContainerStatus.SETTLED)
+                .map(offer ->
+                        TransactionHistoryDto.builder()
+                                .transactionDate(offer.getCreatedAt())
+                                .type("구매")
+                                .itemName(offer.getRequest().getCargo().getItemName())
+                                .partnerName(offer.getRequest().getRequester().getCompanyName())
+                                .price(offer.getPrice())
+                                .currency(offer.getCurrency())
+                                // ★★★ 핵심 수정 2: 상태 텍스트를 "정산완료"로 직접 지정합니다. ★★★
+                                .status("정산완료")
+                                .build()
+                ).collect(Collectors.toList());
     }
     
     public Page<TransactionHistoryDto> getShipperHistory(String currentUserId, Pageable pageable) {

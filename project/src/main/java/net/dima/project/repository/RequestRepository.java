@@ -57,6 +57,8 @@ public interface RequestRepository extends JpaRepository<RequestEntity, Long>, J
     
     // [✅ 이 메서드가 있는지 확인해주세요]
     List<RequestEntity> findByRequesterAndSourceOfferIsNullAndStatus(UserEntity requester, RequestStatus status);
+ // [✅ 이 메서드를 추가해주세요]
+    List<RequestEntity> findBySourceOfferIn(List<OfferEntity> sourceOffers);
 
 
 }

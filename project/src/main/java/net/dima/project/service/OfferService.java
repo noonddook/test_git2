@@ -72,28 +72,36 @@ public class OfferService {
     /**
      * [수정] 현재 로그인한 사용자의 모든 제안 목록을 필터링, 정렬, 페이징하여 조회합니다.
      */
+ // OfferService.java의 getMyOffers 메서드 내부
     public Page<MyOfferDto> getMyOffers(String currentUserId, String status, String keyword, Pageable pageable) {
         UserEntity forwarder = userRepository.findByUserId(currentUserId);
 
         Specification<OfferEntity> spec = (root, query, cb) -> {
-            // [✅ 핵심 수정] 여러 조건을 담을 Predicate 리스트를 생성합니다.
             List<Predicate> predicates = new ArrayList<>();
 
-            // 기본 조건: 항상 현재 사용자의 제안만 조회
             predicates.add(cb.equal(root.get("forwarder"), forwarder));
 
-            // 1. 상태(status) 필터링 조건 추가
+            // ★★★ 핵심 수정: 제외할 상태 목록을 정의하고, 해당 상태가 아닌 것만 조회하도록 변경 ★★★
+            List<OfferStatus> excludedStatuses = List.of(
+                OfferStatus.RESOLD,     // 재판매 완료
+                OfferStatus.CONFIRMED,  // 컨테이너 확정
+                OfferStatus.SHIPPED,    // 선적완료
+                OfferStatus.COMPLETED   // 운송완료
+            );
+            predicates.add(root.get("status").in(excludedStatuses).not());
+
+
+            // 1. 상태(status) 필터링 조건 추가 (이 부분은 그대로 유지)
             if (status != null && !status.isEmpty()) {
                 try {
                     OfferStatus filterStatus = OfferStatus.valueOf(status.toUpperCase());
-                    // 리스트에 조건(Predicate)을 추가합니다.
                     predicates.add(cb.equal(root.get("status"), filterStatus));
                 } catch (IllegalArgumentException e) {
                     // 잘못된 상태 값이 들어오면 무시
                 }
             }
 
-            // 2. 키워드(keyword) 검색 조건 추가 (품명 또는 요청 ID)
+            // ... 나머지 검색 로직은 그대로 유지 ...
             if (keyword != null && !keyword.isBlank()) {
                 Join<OfferEntity, RequestEntity> requestJoin = root.join("request");
                 Join<RequestEntity, CargoEntity> cargoJoin = requestJoin.join("cargo");
@@ -104,17 +112,14 @@ public class OfferService {
                 } else {
                     keywordPredicate = cb.like(cargoJoin.get("itemName"), "%" + keyword + "%");
                 }
-                // 리스트에 조건(Predicate)을 추가합니다.
                 predicates.add(keywordPredicate);
             }
             
-            // N+1 문제 방지를 위해 fetch join 명시
             if (query.getResultType() != Long.class && query.getResultType() != long.class) {
                 root.fetch("request").fetch("cargo");
                 root.fetch("container");
             }
 
-            // [✅ 핵심 수정] 리스트에 담긴 모든 조건들을 'AND'로 조합하여 최종 반환합니다.
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 

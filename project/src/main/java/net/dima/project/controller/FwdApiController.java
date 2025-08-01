@@ -268,5 +268,14 @@ public class FwdApiController {
         return ResponseEntity.ok(transactionHistoryService.getPurchaseHistory(authentication.getName()));
     }
     
+    @PostMapping("/containers/{containerId}/settle")
+    public ResponseEntity<String> settleContainer(@PathVariable("containerId") String containerId, Authentication authentication) {
+        try {
+            containerService.settleContainer(containerId, authentication.getName());
+            return ResponseEntity.ok("컨테이너가 '정산완료' 처리되었습니다. 거래내역 탭에서 확인하세요.");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
     
 }

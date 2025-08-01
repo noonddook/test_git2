@@ -21,6 +21,7 @@ public class MyOfferDto {
     private String status; // PENDING, ACCEPTED, REJECTED 등
     private String statusText; // 진행중, 수락, 거절 등
     private LocalDateTime deadline;
+    private boolean isFullySettled; // [✅ 추가]
 
     public static MyOfferDto fromEntity(OfferEntity entity) {
         OfferStatus status = entity.getStatus(); // [✅ 1. 수정] 타입을 String -> OfferStatus로 변경

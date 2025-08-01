@@ -57,14 +57,15 @@ public class ContainerService {
 
         // DB에서 직접 정렬 가능한 필드는 DB에 위임하고, 아니라면 기본 정렬로 가져옵니다.
         Sort dbSort = sortBy.equals("availableCbm") ? Sort.by("containerId").ascending() : sort;
-        List<ContainerEntity> myContainers = containerRepository.findByForwarder(forwarder, dbSort);
+        List<ContainerEntity> myContainers = containerRepository.findByForwarderAndStatusNot(forwarder, ContainerStatus.SETTLED, dbSort);
 
         if (myContainers.isEmpty()) {
             return new ArrayList<>();
         }
 
         List<String> myContainerIds = myContainers.stream().map(ContainerEntity::getContainerId).collect(Collectors.toList());
-        List<OfferEntity> allOffers = offerRepository.findOffersForContainersWithDetailsByIds(myContainerIds);
+     // ★★★ 핵심 수정: 연결된 모든 상세 정보를 한 번에 조회하도록 변경 ★★★
+        List<OfferEntity> allOffers = offerRepository.findAllByContainer_ContainerIdIn(myContainerIds);
         Map<String, List<OfferEntity>> offersByContainerId = allOffers.stream()
                 .collect(Collectors.groupingBy(offer -> offer.getContainer().getContainerId()));
 
@@ -79,7 +80,10 @@ public class ContainerService {
                     .sum();
             
             double resaleCbm = offers.stream().filter(o -> o.getStatus() == OfferStatus.FOR_SALE).mapToDouble(o -> o.getRequest().getCargo().getTotalCbm()).sum();
-            double biddingCbm = offers.stream().filter(o -> o.getStatus() == OfferStatus.PENDING).mapToDouble(o -> o.getRequest().getCargo().getTotalCbm()).sum();
+            double biddingCbm = offers.stream()
+                    .filter(o -> o.getStatus() == OfferStatus.PENDING) // 상태가 PENDING인 제안만 필터링
+                    .mapToDouble(o -> o.getRequest().getCargo().getTotalCbm()) // CBM을 가져와서
+                    .sum(); // 모두 더함
             
             List<ContainerCargoEntity> externalCargos = containerCargoRepository.findExternalCargosByContainerId(container.getContainerId(), true);
             double externalCbm = externalCargos.stream().mapToDouble(ContainerCargoEntity::getCbmLoaded).sum();
@@ -135,10 +139,13 @@ public class ContainerService {
 
         List<AvailableContainerDto> result = allMyContainers.stream()
                 .filter(container -> {
-                    boolean departureMatch = container.getDeparturePort().trim().equalsIgnoreCase(request.getDeparturePort().trim());
-                    boolean arrivalMatch = container.getArrivalPort().trim().equalsIgnoreCase(request.getArrivalPort().trim());
-                    log.info("   - 필터링 검사: 컨테이너({}), 출발지 일치={}, 도착지 일치={}", container.getContainerId(), departureMatch, arrivalMatch);
-                    return departureMatch && arrivalMatch;
+                	 boolean isScheduled = container.getStatus() == ContainerStatus.SCHEDULED;
+                     boolean departureMatch = container.getDeparturePort().trim().equalsIgnoreCase(request.getDeparturePort().trim());
+                     boolean arrivalMatch = container.getArrivalPort().trim().equalsIgnoreCase(request.getArrivalPort().trim());
+                     log.info("   - 필터링 검사: 컨테이너({}), 상태일치={}, 출발지 일치={}, 도착지 일치={}", 
+                             container.getContainerId(), isScheduled, departureMatch, arrivalMatch);
+                    
+                    return isScheduled && departureMatch && arrivalMatch;
                 })
                 .map(container -> {
                     Double loadedCbm = Optional.ofNullable(containerCargoRepository.sumCbmByContainerId(container.getContainerId())).orElse(0.0);
@@ -204,27 +211,29 @@ public class ContainerService {
         containerCargoRepository.delete(cargo);
     }
 
+ // [✅ getDetailsForContainerStatus 메서드 전체를 이 코드로 교체해주세요]
     public List<CargoDetailDto> getDetailsForContainerStatus(String containerId, String statusString, String currentUserId) {
-        List<CargoDetailDto> details = new ArrayList<>();
         UserEntity forwarder = userRepository.findByUserId(currentUserId);
-
         OfferStatus status = OfferStatus.valueOf(statusString.toUpperCase());
 
-        List<OfferEntity> offers = offerRepository.findDetailsByContainerAndStatus(containerId, status, forwarder);
-        for (OfferEntity offer : offers) {
-            Double cbmValue = Optional.ofNullable(offer.getRequest())
-                                      .map(RequestEntity::getCargo)
-                                      .map(CargoEntity::getTotalCbm)
-                                      .orElse(0.0);
+        List<OfferEntity> offers = offerRepository.findDetailsByContainerAndStatusWithAllDetails(containerId, status, forwarder);
+        
+        // ★★★ 핵심 수정 1: 재판매 요청 정보를 미리 Map에 담아 준비합니다 ★★★
+        Map<Long, Long> resaleRequestIdMap = new java.util.HashMap<>();
+        if (status == OfferStatus.FOR_SALE && !offers.isEmpty()) {
+            List<RequestEntity> resaleRequests = requestRepository.findBySourceOfferIn(offers);
+            resaleRequests.forEach(req -> 
+                resaleRequestIdMap.put(req.getSourceOffer().getOfferId(), req.getRequestId())
+            );
+        }
 
-            Long resaleReqId = null;
-            if (offer.getStatus() == OfferStatus.FOR_SALE) {
-                resaleReqId = requestRepository.findBySourceOffer(offer)
-                                               .map(RequestEntity::getRequestId)
-                                               .orElse(null);
-            }
+        List<CargoDetailDto> details = offers.stream().map(offer -> {
+            Double cbmValue = offer.getRequest().getCargo().getTotalCbm();
+            
+            // ★★★ 핵심 수정 2: DB를 다시 조회하는 대신, 미리 준비된 Map에서 데이터를 찾습니다 ★★★
+            Long resaleReqId = resaleRequestIdMap.get(offer.getOfferId());
 
-            details.add(CargoDetailDto.builder()
+            return CargoDetailDto.builder()
                     .offerId(offer.getOfferId())
                     .itemName(offer.getRequest().getCargo().getItemName())
                     .cbm(cbmValue)
@@ -234,10 +243,11 @@ public class ContainerService {
                     .external(false)
                     .deadline(offer.getRequest().getDeadline())
                     .resaleRequestId(resaleReqId)
-                    .build());
-        }
+                    .build();
+        }).collect(Collectors.toList());
 
-        if (status == OfferStatus.ACCEPTED) {
+        // 외부 화물 조회 로직은 그대로 유지
+        if (status == OfferStatus.ACCEPTED || status == OfferStatus.CONFIRMED) {
             List<ContainerCargoEntity> externalCargos = containerCargoRepository.findExternalCargosByContainerId(containerId, true);
             for (ContainerCargoEntity cargo : externalCargos) {
                 details.add(CargoDetailDto.builder()
@@ -246,7 +256,7 @@ public class ContainerService {
                         .cbm(cargo.getCbmLoaded())
                         .freightCost(cargo.getFreightCost())
                         .freightCurrency(cargo.getFreightCurrency())
-                        .status(OfferStatus.ACCEPTED.name())
+                        .status(status.name())
                         .external(true)
                         .deadline(null)
                         .build());
@@ -395,4 +405,13 @@ public class ContainerService {
         return container;
     }
     
+ // ContainerService 클래스 내부에 아래 메서드를 추가하세요.
+    @Transactional
+    public void settleContainer(String containerId, String currentUserId) {
+        ContainerEntity container = findAndValidateContainer(containerId, currentUserId);
+        if (container.getStatus() != ContainerStatus.COMPLETED) {
+            throw new IllegalStateException("'운송완료' 상태의 컨테이너만 정산할 수 있습니다.");
+        }
+        container.setStatus(ContainerStatus.SETTLED);
+    }
 }

@@ -439,3 +439,9 @@
     color: #495057;
     border: 1px solid #ced4da;
 }
+
+/* FWD_request.css 파일 맨 아래에 추가 */
+
+.request-card .btn-timer:hover {
+    transform: none;
+}

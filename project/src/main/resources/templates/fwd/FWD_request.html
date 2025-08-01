@@ -62,9 +62,9 @@
 				<div class="request-list">
 				    <div th:if="${requestsPage.empty}" class="no-results-message">조회된 요청이 없습니다.</div>
 				    
-				    <article class="card request-card"
-				             th:each="req : ${requestsPage.content}"
-				             th:classappend="${req.status.name() != 'OPEN'} ? 'is-closed' : ''"
+							<article class="card request-card"
+							         th:each="req : ${requestsPage.content}"
+							         th:classappend="${req.status.name() != 'OPEN' or #temporals.createNow().isAfter(req.deadlineDateTime)} ? 'is-closed' : ''"
 				             th:attr="data-request-id=${req.id},
 				                      data-request-cbm=${req.cbm},
 				                      data-requester-id=${req.requesterId},
@@ -89,21 +89,22 @@
 				            </div>
 				            <div class="cbm" th:text="${#numbers.formatDecimal(req.cbm, 1, 2)} + ' CBM'"></div>
 				        </div>
-						<div class="actions">
-						    <button th:if="${req.status.name() == 'OPEN'}" class="btn btn-timer btn-danger" th:attr="data-deadline-datetime=${req.deadlineDateTime}"></button>
-						
-						    <th:block th:if="${req.status.name() == 'OPEN'}">
-						        <button th:if="${#authentication.name == req.requesterId}" class="btn-quote" disabled>재판매중</button>
-						        <th:block th:unless="${#authentication.name == req.requesterId}">
-						            <button th:if="${req.hasMyOffer}" class="btn-quote" disabled>제안완료</button>
-						            <button th:unless="${req.hasMyOffer}" class="btn-quote btn-primary">견적제안</button>
-						        </th:block>
-						    </th:block>
-						
-						    <span th:unless="${req.status.name() == 'OPEN'}" class="status-badge closed">
-						        마감
-						    </span>
-						</div>
+							<div class="actions">
+							    <th:block th:if="${req.status.name() == 'OPEN' and #temporals.createNow().isBefore(req.deadlineDateTime)}">
+							        <button class="btn btn-timer btn-danger" th:attr="data-deadline-datetime=${req.deadlineDateTime}"></button>
+							
+							        <button th:if="${#authentication.name == req.requesterId}" class="btn-quote" disabled>재판매중</button>
+							        
+							        <th:block th:unless="${#authentication.name == req.requesterId}">
+							            <button th:if="${req.hasMyOffer}" class="btn-quote" disabled>제안완료</button>
+							            <button th:unless="${req.hasMyOffer}" class="btn-quote btn-primary">견적제안</button>
+							        </th:block>
+							    </th:block>
+							
+							    <span th:if="${req.status.name() != 'OPEN' or #temporals.createNow().isAfter(req.deadlineDateTime)}" class="status-badge closed">
+							        마감
+							    </span>
+							</div>
 				    </article>
 				</div>
 

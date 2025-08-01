@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!deadlineString) return;
 
             const deadline = new Date(deadlineString);
-            const diff = deadline - now; // 남은 시간을 밀리초로 계산
+            const diff = deadline - now;
 
             const card = button.closest('.request-card');
             const quoteBtn = card ? card.querySelector('.btn-quote') : null;
@@ -23,20 +23,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     quoteBtn.disabled = true;
                 }
             } else {
-                // [✅ 핵심 수정] 남은 시간에 따라 표시 단위를 변경하는 로직
-                const totalMinutes = Math.floor(diff / (1000 * 60));
-                const totalHours = Math.floor(diff / (1000 * 60 * 60));
+                // ★★★ 핵심 수정: 남은 시간을 일/시/분/초로 계산하여 표시 ★★★
                 const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
-                if (totalHours >= 24) {
-                    // 24시간 이상 남았을 때: "Nday"
-                    button.textContent = `${days} days`;
-                } else if (totalHours >= 1) {
-                    // 1시간 이상 24시간 미만 남았을 때: "Nhours"
-                    button.textContent = `${totalHours} hours`;
+                if (days > 0) {
+                    // 남은 시간이 하루 이상일 경우 "N일 HH:MM" 형식으로 표시
+                    button.textContent = `${days}일 ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
                 } else {
-                    // 1시간 미만 남았을 때: "Nmin"
-                    button.textContent = `${totalMinutes} mins`;
+                    // 남은 시간이 하루 미만일 경우 "HH:MM:SS" 형식으로 표시
+                    button.textContent = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
                 }
 
                 if (quoteBtn) {
@@ -46,7 +44,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // 페이지 로드 시 즉시 타이머를 한 번 실행하고, 1초마다 업데이트합니다.
     updateAllTimers();
     setInterval(updateAllTimers, 1000);
 });

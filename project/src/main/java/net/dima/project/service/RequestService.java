@@ -1,5 +1,7 @@
 package net.dima.project.service;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -12,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import net.dima.project.dto.MyPostedRequestDto;
 import net.dima.project.dto.MyRequestStatusDto;
@@ -45,42 +48,43 @@ public class RequestService {
     // [✅ 이 메서드로 완전히 교체해주세요]
  // [✅ 이 메서드 전체를 아래 코드로 교체해주세요]
  // [✅ 이 메서드 전체를 아래 코드로 교체해주세요]
+ // [✅ 이 메서드 전체를 아래 코드로 교체해주세요]
     public Page<RequestCardDto> getRequests(
-            boolean excludeClosed, // 마감 제외 플래그
+            boolean excludeClosed,
             String tradeType, String transportType,
             String departurePort, String arrivalPort,
             String itemName, Pageable pageable, String currentUserId) {
 
         Specification<RequestEntity> spec = (root, query, cb) -> {
-            Specification<RequestEntity> finalSpec = Specification.where(null);
+            List<Predicate> predicates = new ArrayList<>();
 
-            // [✅ 수정] '마감 제안 제외'가 true일 때만 OPEN 상태를 필터링
+            // ★★★ 핵심 수정: 마감 시간(deadline)을 기준으로 필터링하도록 변경 ★★★
+            LocalDateTime now = LocalDateTime.now();
             if (excludeClosed) {
-                finalSpec = finalSpec.and((r, q, c) -> c.equal(r.get("status"), RequestStatus.OPEN));
-            } else {
-                // 체크 해제 시에는 OPEN 과 CLOSED 모두 조회
-                finalSpec = finalSpec.and((r, q, c) -> r.get("status").in(RequestStatus.OPEN, RequestStatus.CLOSED));
+                // '마감 제안 제외'가 켜져 있으면, OPEN 상태이면서 마감 시간이 지나지 않은 것만 조회
+                predicates.add(cb.equal(root.get("status"), RequestStatus.OPEN));
+                predicates.add(cb.greaterThan(root.get("deadline"), now));
             }
 
             // 다른 필터 조건들은 그대로 유지
             if (tradeType != null && !tradeType.isEmpty()) {
-                finalSpec = finalSpec.and((r, q, c) -> c.equal(r.get("tradeType"), tradeType));
+                predicates.add(cb.equal(root.get("tradeType"), tradeType));
             }
             if (transportType != null && !transportType.isEmpty()) {
-                finalSpec = finalSpec.and((r, q, c) -> c.equal(r.get("transportType"), transportType));
+                predicates.add(cb.equal(root.get("transportType"), transportType));
             }
             if (departurePort != null && !departurePort.isEmpty()) {
-                finalSpec = finalSpec.and((r, q, c) -> c.equal(r.get("departurePort"), departurePort));
+                predicates.add(cb.equal(root.get("departurePort"), departurePort));
             }
             if (arrivalPort != null && !arrivalPort.isEmpty()) {
-                finalSpec = finalSpec.and((r, q, c) -> c.equal(r.get("arrivalPort"), arrivalPort));
+                predicates.add(cb.equal(root.get("arrivalPort"), arrivalPort));
             }
             if (itemName != null && !itemName.isBlank()) {
                 Join<RequestEntity, CargoEntity> cargoJoin = root.join("cargo");
-                finalSpec = finalSpec.and((r, q, c) -> c.like(cargoJoin.get("itemName"), "%" + itemName + "%"));
+                predicates.add(cb.like(cargoJoin.get("itemName"), "%" + itemName + "%"));
             }
             
-            return finalSpec.toPredicate(root, query, cb);
+            return cb.and(predicates.toArray(new Predicate[0]));
         };
 
         Page<RequestEntity> requestPage = requestRepository.findAll(spec, pageable);

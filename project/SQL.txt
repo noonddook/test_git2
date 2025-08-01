@@ -1,6 +1,3 @@
-
-use dima5;
-
 -- 1. 사용자(users) 테이블
 CREATE TABLE users (
     user_seq INT AUTO_INCREMENT PRIMARY KEY,
@@ -55,17 +52,16 @@ CREATE TABLE request (
     deadline DATETIME NOT NULL,
     trade_type VARCHAR(10) NOT NULL,
     transport_type VARCHAR(10) NOT NULL,
-    status VARCHAR(20) NOT NULL DEFAULT 'OPEN' COMMENT 'OPEN, CLOSED',
+    status VARCHAR(20) NOT NULL DEFAULT 'OPEN' COMMENT 'OPEN, CLOSED, CONFIRMED',
     -- [중요] 재판매 요청의 근원을 추적하기 위한 컬럼
     source_offer_id BIGINT NULL COMMENT '이 요청이 재판매라면, 어떤 offer로부터 파생되었는지',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (cargo_id) REFERENCES cargo(cargo_id),
     FOREIGN KEY (requester_id) REFERENCES users(user_seq),
-    -- FOREIGN KEY (source_offer_id) REFERENCES offer(offer_id), -- offer 테이블 생성 후 추가
+    -- FOREIGN KEY (source_offer_id) REFERENCES offer(offer_id), 
     INDEX idx_request_status_deadline (status, deadline)
 );
 
-ALTER TABLE request ADD CONSTRAINT fk_request_source_offer FOREIGN KEY (source_offer_id) REFERENCES offer(offer_id);
 
 -- 5. 제안/입찰(offer) 테이블 (동일)
 -- request에 대해 포워더가 제안하는 행위
@@ -83,6 +79,12 @@ CREATE TABLE offer (
     FOREIGN KEY (forwarder_id) REFERENCES users(user_seq)
 );
 
+
+-- 6. offer 테이블 생성 후 추가 FK 추가
+-- 
+ALTER TABLE request ADD CONSTRAINT fk_request_source_offer FOREIGN KEY (source_offer_id) REFERENCES offer(offer_id);
+
+-- 7. container_cargo 테이블 추가
 CREATE TABLE container_cargo (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     container_id VARCHAR(30) NOT NULL COMMENT '어느 컨테이너에 실렸는지',
@@ -95,3 +97,7 @@ CREATE TABLE container_cargo (
     FOREIGN KEY (offer_id) REFERENCES offer(offer_id),
     INDEX idx_cc_container(container_id)
 );
+-- 8. container_cargo 테이블에 운임 정보 컬럼 추가
+ALTER TABLE container_cargo 
+ADD COLUMN freight_cost DECIMAL(19, 4) NULL,
+ADD COLUMN freight_currency VARCHAR(3) NULL;

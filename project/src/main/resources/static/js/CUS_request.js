@@ -1,4 +1,4 @@
-// [✅ CUS_request.js 파일 전체를 이 코드로 교체해주세요]
+// [✅ 이 코드로 CUS_request.js 파일 전체를 교체해주세요]
 document.addEventListener('DOMContentLoaded', () => {
     
     // --- 1. 신규 요청 모달 관련 로직 ---
@@ -59,36 +59,44 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 2. 제안 보기 및 확정 관련 로직 ---
     const viewContainer = document.getElementById('view-container');
     const offerTemplate = document.getElementById('offer-list-template');
-    let currentRequestId = null;
+    
+    if (!viewContainer || !offerTemplate) {
+        console.error("필수 요소를 찾을 수 없습니다: view-container 또는 offer-list-template");
+        return;
+    }
 
-    // viewContainer가 없을 경우를 대비한 방어 코드
-    if (!viewContainer || !offerTemplate) return;
-
-    // 모든 이벤트는 viewContainer에 위임하여 처리
     viewContainer.addEventListener('click', async (e) => {
         const target = e.target;
-        const requestCard = target.closest('.request-card');
-        if (!requestCard) return; // 카드 외부 클릭은 무시
-
-        const requestId = requestCard.dataset.requestId;
-        currentRequestId = requestId; // 현재 작업중인 요청 ID 설정
 
         // '제안 보기' 버튼 클릭 처리
         if (target.classList.contains('btn-details')) {
-            const detailsContainer = requestCard.querySelector('.offer-details-container');
-            
-            // 이미 열려있으면 닫기
-            if (requestCard.classList.contains('is-expanded')) {
+            const requestCard = target.closest('.request-card');
+            const itemContainer = requestCard.closest('.request-item-container');
+            const detailsContainer = itemContainer.querySelector('.offer-details-container');
+            const requestId = requestCard.dataset.requestId;
+
+            if (!itemContainer || !detailsContainer) return;
+
+            if (itemContainer.classList.contains('is-expanded')) {
                 detailsContainer.innerHTML = '';
-                requestCard.classList.remove('is-expanded');
+                itemContainer.classList.remove('is-expanded');
                 return;
             }
+            
+            document.querySelectorAll('.request-item-container.is-expanded').forEach(openItem => {
+                openItem.classList.remove('is-expanded');
+                const openDetails = openItem.querySelector('.offer-details-container');
+                if (openDetails) openDetails.innerHTML = '';
+            });
 
             try {
+                detailsContainer.innerHTML = `<p class="loading-message" style="text-align:center; padding: 2rem;">제안 목록을 불러오는 중...</p>`;
+                itemContainer.classList.add('is-expanded');
+
                 const response = await fetch(`/api/cus/requests/${requestId}/offers`);
                 if (!response.ok) throw new Error('제안 정보를 불러오지 못했습니다.');
-                const offers = await response.json();
                 
+                const offers = await response.json();
                 const templateClone = offerTemplate.content.cloneNode(true);
                 const tableBody = templateClone.querySelector('tbody');
 
@@ -109,16 +117,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 detailsContainer.innerHTML = '';
                 detailsContainer.appendChild(templateClone);
-                requestCard.classList.add('is-expanded');
+
             } catch (error) {
                 console.error("Error fetching offers:", error);
-                detailsContainer.innerHTML = `<p class="error-message" style="padding: 1rem; text-align: center;">${error.message}</p>`;
+                detailsContainer.innerHTML = `<p class="error-message" style="padding: 1rem; text-align: center; color: red;">${error.message}</p>`;
             }
         }
 
-        // '확정' 버튼 클릭 처리 (동적으로 생성된 버튼)
+        // '확정' 버튼 클릭 처리
         if (target.classList.contains('btn-confirm-offer')) {
+            // ★★★ 핵심 수정: 이제 '확정' 버튼에서 가장 가까운 request-card를 찾아 requestId를 가져옵니다 ★★★
+            const requestCard = target.closest('.request-item-container').querySelector('.request-card');
+            const requestId = requestCard.dataset.requestId;
             const winningOfferId = target.dataset.offerId;
+
             if (confirm('이 제안을 최종 확정하시겠습니까?')) {
                 try {
                     const response = await fetch(`/api/cus/requests/${requestId}/confirm`, {

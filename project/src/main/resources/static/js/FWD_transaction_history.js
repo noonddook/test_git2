@@ -1,34 +1,75 @@
-// [✅ FWD_transaction_history.js 파일 전체를 이 코드로 교체]
+// [✅ FWD_transaction_history.js 파일 전체를 이 코드로 교체해주세요]
 document.addEventListener('DOMContentLoaded', () => {
-    // --- 기본 요소 가져오기 ---
+
     const filterGroup = document.getElementById('transaction-filter-group');
     const tableBody = document.getElementById('transaction-list-body');
     const searchForm = document.getElementById('search-form');
     const keywordInput = document.getElementById('keyword-input');
     const startDateInput = document.getElementById('start-date');
     const endDateInput = document.getElementById('end-date');
-    
-    // [✅ 추가] 금액 계산 버튼 및 모달 요소
     const calcButton = document.getElementById('btn-calculate-summary');
     const summaryModal = document.getElementById('summary-modal');
+    
+    if (!filterGroup || !tableBody || !searchForm || !calcButton || !summaryModal) {
+        console.error('거래내역 페이지의 필수 HTML 요소 중 일부를 찾을 수 없습니다. ID 값을 확인해주세요.');
+        return;
+    }
+    
     const summaryModalTitle = document.getElementById('summary-modal-title');
     const summaryModalBody = document.getElementById('summary-modal-body');
 
-    // --- 데이터 렌더링 함수 (기존과 동일) ---
     async function fetchAndRenderTransactions() {
-        // ... (이 함수 내용은 변경 없음) ...
-    }
-    
-    // [✅ 추가] 날짜 선택 여부에 따라 계산 버튼 활성화/비활성화
-    function updateCalcButtonState() {
-        if (startDateInput.value && endDateInput.value) {
-            calcButton.disabled = false;
-        } else {
-            calcButton.disabled = true;
+        const activeFilter = filterGroup.querySelector('.is-active');
+        const filterType = activeFilter ? activeFilter.dataset.filter : 'all';
+        const keyword = keywordInput.value;
+        const startDate = startDateInput.value;
+        const endDate = endDateInput.value;
+
+        let url = '/api/fwd/transactions';
+        if (filterType === 'sale') url += '/sales';
+        if (filterType === 'purchase') url += '/purchases';
+
+        const params = new URLSearchParams();
+        if (startDate) params.append('startDate', startDate);
+        if (endDate) params.append('endDate', endDate);
+        if (keyword) params.append('keyword', keyword);
+        
+        const fullUrl = `${url}?${params.toString()}`;
+
+        try {
+            const response = await fetch(fullUrl);
+            if (!response.ok) throw new Error('데이터를 불러오는 데 실패했습니다.');
+
+            const transactions = await response.json();
+            tableBody.innerHTML = '';
+
+            if (transactions.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 40px 0; color: #6c757d;">거래 내역이 없습니다.</td></tr>';
+                return;
+            }
+
+            transactions.forEach(tx => {
+                const row = tableBody.insertRow();
+                const transactionDate = new Date(tx.transactionDate).toLocaleDateString('ko-KR');
+                const price = `${tx.price.toLocaleString()} ${tx.currency}`;
+                const route = `${tx.departurePort} → ${tx.arrivalPort}`;
+
+                row.innerHTML = `
+                    <td>${transactionDate}</td>
+                    <td>${tx.type}</td>
+                    <td>${route}</td>
+                    <td>${tx.itemName}</td>
+                    <td>${tx.partnerName || 'N/A'}</td>
+                    <td>${price}</td>
+                    <td>${tx.status}</td>
+                `;
+            });
+        } catch (error) {
+            console.error(error);
+            tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center; color: red; padding: 40px 0;">${error.message}</td></tr>`;
         }
     }
 
-    // [✅ 추가] 금액 계산 및 모달 표시 함수
     function showSummaryModal() {
         const rows = tableBody.querySelectorAll('tr');
         if (rows.length === 0 || (rows.length === 1 && rows[0].querySelector('td[colspan="7"]'))) {
@@ -39,7 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const activeFilter = filterGroup.querySelector('.is-active').dataset.filter;
         let totalKRW = 0;
         let totalUSD = 0;
-        let detailsHtml = '<table class="details-table"><thead><tr><th>품명</th><th>경로</th><th>금액</th></tr></thead><tbody>';
+        let detailsHtml = '<table class="details-table" style="width:100%; border-collapse: collapse;"><thead><tr style="border-bottom: 1px solid #dee2e6;"><th style="padding: 8px; text-align: left;">품명</th><th style="padding: 8px; text-align: left;">경로</th><th style="padding: 8px; text-align: right;">금액</th></tr></thead><tbody>';
 
         rows.forEach(row => {
             const cells = row.querySelectorAll('td');
@@ -50,22 +91,16 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const [amountStr, currency] = priceText.split(' ');
             const amount = parseFloat(amountStr.replace(/,/g, ''));
-            
             let displayAmount = amount;
             
-            if (activeFilter === 'all' && type === '구매') {
-                displayAmount = -amount;
-            } else if (activeFilter === 'purchase') {
+            if ((activeFilter === 'all' && type === '구매') || activeFilter === 'purchase') {
                 displayAmount = -amount;
             }
 
-            if (currency === 'KRW') {
-                totalKRW += displayAmount;
-            } else if (currency === 'USD') {
-                totalUSD += displayAmount;
-            }
+            if (currency === 'KRW') totalKRW += displayAmount;
+            if (currency === 'USD') totalUSD += displayAmount;
             
-            detailsHtml += `<tr><td>${itemName}</td><td>${route}</td><td>${displayAmount.toLocaleString()} ${currency}</td></tr>`;
+            detailsHtml += `<tr style="border-bottom: 1px solid #f1f3f5;"><td style="padding: 8px;">${itemName}</td><td style="padding: 8px;">${route}</td><td style="padding: 8px; text-align: right;">${displayAmount.toLocaleString()} ${currency}</td></tr>`;
         });
 
         detailsHtml += '</tbody></table>';
@@ -74,19 +109,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const totalColorUSD = totalUSD >= 0 ? 'color: red;' : 'color: blue;';
         
         let summaryHtml = '<hr style="margin: 20px 0;"><h4 style="text-align: right;">합계</h4>';
-        if (totalKRW !== 0) {
-            summaryHtml += `<p style="text-align: right; font-size: 1.2em; font-weight: bold; ${totalColorKRW}">${totalKRW.toLocaleString()} KRW</p>`;
-        }
-        if (totalUSD !== 0) {
-            summaryHtml += `<p style="text-align: right; font-size: 1.2em; font-weight: bold; ${totalColorUSD}">${totalUSD.toLocaleString()} USD</p>`;
-        }
+        if (Math.abs(totalKRW) > 0) summaryHtml += `<p style="text-align: right; font-size: 1.2em; font-weight: bold; ${totalColorKRW}">${totalKRW.toLocaleString()} KRW</p>`;
+        if (Math.abs(totalUSD) > 0) summaryHtml += `<p style="text-align: right; font-size: 1.2em; font-weight: bold; ${totalColorUSD}">${totalUSD.toLocaleString()} USD</p>`;
         
         summaryModalTitle.textContent = `거래 합계 (${startDateInput.value} ~ ${endDateInput.value})`;
         summaryModalBody.innerHTML = detailsHtml + summaryHtml;
         summaryModal.style.display = 'flex';
     }
 
-    // --- 이벤트 리스너 설정 ---
+    // 4. 이벤트 리스너 설정
     filterGroup.addEventListener('click', (e) => {
         if (e.target.tagName !== 'BUTTON' || e.target.classList.contains('is-active')) return;
         filterGroup.querySelector('.is-active').classList.remove('is-active');
@@ -99,21 +130,23 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchAndRenderTransactions();
     });
     
-    startDateInput.addEventListener('change', () => {
-        updateCalcButtonState();
-        fetchAndRenderTransactions();
-    });
-    endDateInput.addEventListener('change', () => {
-        updateCalcButtonState();
-        fetchAndRenderTransactions();
+    // ★★★ 핵심 수정 1: 날짜 변경 시, 버튼 상태 변경 함수 호출을 제거하고 조회만 실행 ★★★
+    startDateInput.addEventListener('change', fetchAndRenderTransactions);
+    endDateInput.addEventListener('change', fetchAndRenderTransactions);
+
+    // ★★★ 핵심 수정 2: '금액 계산' 버튼 클릭 시, 날짜 선택 여부를 확인하여 분기 처리 ★★★
+    calcButton.addEventListener('click', () => {
+        if (!startDateInput.value || !endDateInput.value) {
+            alert('날짜를 지정한 뒤에 계산할 수 있습니다.');
+            return; // 날짜가 없으면 여기서 함수 종료
+        }
+        // 날짜가 있으면 계산 함수 실행
+        showSummaryModal();
     });
 
-    // [✅ 추가] 계산 버튼 클릭 및 모달 닫기 이벤트
-    calcButton.addEventListener('click', showSummaryModal);
     summaryModal.querySelector('.btn-close').addEventListener('click', () => summaryModal.style.display = 'none');
     summaryModal.querySelector('.btn-cancel').addEventListener('click', () => summaryModal.style.display = 'none');
 
-    // --- 초기 실행 ---
-    updateCalcButtonState();
+    // 5. 페이지 첫 로딩 시 실행 (불필요한 updateCalcButtonState 함수 호출 제거)
     fetchAndRenderTransactions();
 });

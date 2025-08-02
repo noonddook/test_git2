@@ -7,6 +7,8 @@ import net.dima.project.entity.OfferStatus;
 import net.dima.project.entity.RequestEntity;
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 @Builder
@@ -20,6 +22,8 @@ public class MyPostedRequestDto {
     private String winningBidderCompanyName; // [✅ 추가] 낙찰자 회사 이름
     private String detailedStatus; // [✅ 추가] 낙찰 이후의 상세 진행 상태 (OfferStatus)
     private String detailedStatusText; // [✅ 추가] 화면에 표시될 텍스트
+    private LocalDateTime deadlineDateTime; // [✅ 이 필드를 추가해주세요]
+    private LocalDate desiredArrivalDate; // [✅ 이 줄을 추가해주세요]
 
     // [✅ 수정] fromEntity 메서드 시그니처 변경
  // [✅ 기존의 fromEntity 메서드 2개를 아래 코드로 교체해주세요]
@@ -47,26 +51,30 @@ public class MyPostedRequestDto {
                 .itemName(entity.getCargo().getItemName())
                 .cbm(entity.getCargo().getTotalCbm())
                 .deadline(entity.getDeadline().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")))
+                .deadlineDateTime(entity.getDeadline()) // [✅ 추가]
                 .bidderCount(0) // 낙찰 후에는 입찰자 수가 중요하지 않으므로 0으로 통일
                 .status(entity.getStatus().name())
                 .winningBidderCompanyName(winningBidder)
                 .detailedStatus(offerStatus != null ? offerStatus.name() : "NONE")
                 .detailedStatusText(statusText)
+                .desiredArrivalDate(entity.getDesiredArrivalDate()) 
                 .build();
     }
 
+    // [✅ fromEntity(RequestEntity entity, long bidderCount) 메서드를 수정]
     public static MyPostedRequestDto fromEntity(RequestEntity entity, long bidderCount) {
         return MyPostedRequestDto.builder()
                 .requestId(entity.getRequestId())
                 .itemName(entity.getCargo().getItemName())
                 .cbm(entity.getCargo().getTotalCbm())
                 .deadline(entity.getDeadline().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")))
+                .deadlineDateTime(entity.getDeadline()) // [✅ 추가]
                 .bidderCount(bidderCount)
                 .status(entity.getStatus().name())
-                // [✅ 추가] OPEN 상태일 때 NullPointerException 방지를 위해 기본값 설정
-                .winningBidderCompanyName("") 
+                .winningBidderCompanyName("")
                 .detailedStatus("OPEN")
                 .detailedStatusText("입찰 진행 중")
+                .desiredArrivalDate(entity.getDesiredArrivalDate())
                 .build();
     }
 }

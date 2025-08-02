@@ -226,5 +226,68 @@ document.addEventListener('DOMContentLoaded', () => {
                 tableContainer.innerHTML = `<p class="no-details" style="color: red;">데이터를 불러오는 중 오류가 발생했습니다.</p>`;
             }
         }
+		
+		// 확정/운송완료 카드에 있는 '상세보기' 버튼 클릭 시
+		 else if (target.matches('.btn-view-finalized-details')) {
+		     const detailsButton = target;
+		     const containerId = detailsButton.dataset.containerId;
+		     const tableContainer = card.querySelector('.details-table-container');
+
+		     // 이미 열려있으면 닫기
+		     if (detailsButton.classList.contains('is-active')) {
+		         tableContainer.innerHTML = '';
+		         detailsButton.classList.remove('is-active');
+		         return;
+		     }
+
+		     // 다른 열려있는 상세보기가 있다면 모두 닫기
+		     document.querySelectorAll('.btn-secondary.is-active, .btn-view-finalized-details.is-active').forEach(btn => {
+		         btn.classList.remove('is-active');
+		         const otherCard = btn.closest('.container-card');
+		         if (otherCard) {
+		             otherCard.querySelector('.details-table-container').innerHTML = '';
+		         }
+		     });
+
+		     tableContainer.innerHTML = '<p class="loading-message">상세 내역을 불러오는 중...</p>';
+
+		     try {
+		         // 확정된 모든 화물 정보를 가져오기 위해 'CONFIRMED' 상태로 API 호출
+		         const response = await fetch(`/api/fwd/details/${containerId}/CONFIRMED`);
+		         if (!response.ok) throw new Error(`서버 오류: ${response.statusText}`);
+		         
+		         const detailsData = await response.json();
+		         
+		         tableContainer.innerHTML = '';
+		         if (detailsData.length === 0) {
+		             tableContainer.innerHTML = '<p class="no-details">표시할 상세 내역이 없습니다.</p>';
+		         } else {
+		             const tableClone = detailsTableTemplate.content.cloneNode(true);
+		             const tableBody = tableClone.querySelector('tbody');
+
+		             detailsData.forEach(item => {
+		                 const row = tableBody.insertRow();
+		                 const freightText = item.freightCost ? `${item.freightCost.toLocaleString()} ${item.freightCurrency}` : '-';
+		                 const deadlineText = item.deadline ? new Date(item.deadline).toLocaleString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-';
+		                 const idText = item.external ? `외부-${item.offerId}` : item.offerId;
+
+		                 row.innerHTML = `
+		                     <td>${idText}</td>
+		                     <td>${item.itemName}</td>
+		                     <td>${item.cbm.toFixed(2)}</td>
+		                     <td>${freightText}</td>
+		                     <td>${deadlineText}</td>
+		                     <td>${item.external ? '<button class="btn btn-xs btn-danger-outline btn-delete-external" data-cargo-id="' + item.offerId + '">삭제</button>' : '-'}</td>
+		                 `;
+		             });
+		             tableContainer.appendChild(tableClone);
+		         }
+		         detailsButton.classList.add('is-active');
+
+		     } catch (error) {
+		         console.error('상세보기 데이터 로드 실패:', error);
+		         tableContainer.innerHTML = `<p class="no-details" style="color: red;">데이터를 불러오는 중 오류가 발생했습니다.</p>`;
+		     }
+			 }
     });
 });

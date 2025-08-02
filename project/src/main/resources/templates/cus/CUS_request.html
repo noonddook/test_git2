@@ -35,36 +35,60 @@
                         <div th:if="${requestPage.empty}" class="no-results-message">등록된 요청이 없습니다. 우측 하단 버튼으로 새 요청을 등록해보세요.</div>
 
                         <div class="request-item-container" th:each="req : ${requestPage.content}">
-                            <article class="card request-card" th:attr="data-request-id=${req.requestId}" 
-                            th:classappend="${req.status == 'CLOSED' and (req.winningBidderCompanyName == null or #strings.isEmpty(req.winningBidderCompanyName))} ? 'is-closed' : ''">
-                                <div class="info">
-                                    <h3 class="item-name" th:text="${req.itemName}"></h3>
-                                    <p class="cbm" th:text="${#numbers.formatDecimal(req.cbm, 2, 'COMMA', 2, 'POINT')} + ' CBM'"></p>
-                                    <p class="deadline" th:text="'마감: ' + ${req.deadline}"></p>
-                                </div>
-                                <div class="actions">
-                                    <div th:if="${req.status == 'OPEN'}" class="actions-open">
-                                        <span class="bidder-count" th:text="'제안 ' + ${req.bidderCount} + '건 도착'"></span>
-                                        <button class="btn btn-sm btn-details">제안 보기</button>
-                                    </div>
-							        <div th:if="${req.status == 'CLOSED'}" class="actions-closed">
-							            <th:block th:if="${req.winningBidderCompanyName != null and !#strings.isEmpty(req.winningBidderCompanyName)}">
-							                <div class="progress-tracker">
-							                    <div class="step" th:classappend="${#lists.contains({'ACCEPTED','CONFIRMED','SHIPPED','COMPLETED','RESOLD'}, req.detailedStatus)} ? 'is-complete' : ''"><div class="dot"></div><div class="label">낙찰</div></div>
-							                    <div class="step" th:classappend="${#lists.contains({'CONFIRMED','SHIPPED','COMPLETED'}, req.detailedStatus)} ? 'is-complete' : ''"><div class="dot"></div><div class="label">컨테이너 확정</div></div>
-							                    <div class="step" th:classappend="${#lists.contains({'SHIPPED','COMPLETED'}, req.detailedStatus)} ? 'is-complete' : ''"><div class="dot"></div><div class="label">선적완료</div></div>
-							                    <div class="step" th:classappend="${#lists.contains({'COMPLETED'}, req.detailedStatus)} ? 'is-complete' : ''"><div class="dot"></div><div class="label">운송완료</div></div>
-							                </div>
-							                <div class="winner-info">
-							                    <span class="label">담당 포워더 : </span>
-							                    <span class="company-name" th:text="${req.winningBidderCompanyName}"></span>
-							                </div>
-							            </th:block>
-							            <span th:unless="${req.winningBidderCompanyName != null and !#strings.isEmpty(req.winningBidderCompanyName)}"
-							                  class="status-badge closed">마감</span>
-							        </div>
-							    </div>
-							</article>
+<article class="card request-card" th:attr="data-request-id=${req.requestId}"
+         th:classappend="${req.status == 'OPEN' and #temporals.createNow().isAfter(req.deadlineDateTime)} ? 'is-closed' : ''">
+
+    <th:block th:if="${req.status == 'OPEN' and #temporals.createNow().isBefore(req.deadlineDateTime)}">
+        <div class="info">
+            <h3 class="item-name" th:text="${req.itemName}"></h3>
+            <p class="cbm" th:text="${#numbers.formatDecimal(req.cbm, 2, 'COMMA', 2, 'POINT')} + ' CBM'"></p>
+            <p class="deadline" th:text="'마감: ' + ${req.deadline}"></p>
+            <p class="desired-arrival-date" th:if="${req.desiredArrivalDate != null}"
+               th:text="'희망 도착: ' + ${#temporals.format(req.desiredArrivalDate, 'yyyy-MM-dd')}"></p>
+        </div>
+        <div class="actions">
+            <div class="actions-open">
+                <span class="bidder-count" th:text="'제안 ' + ${req.bidderCount} + '건 도착'"></span>
+                <button class="btn btn-sm btn-details">제안 보기</button>
+            </div>
+        </div>
+    </th:block>
+
+    <th:block th:if="${req.status == 'CLOSED'}">
+        <div class="card-body-centered">
+            <div class="info-group-left">
+                <h3 class="item-name" th:text="${req.itemName}"></h3>
+                <p class="cbm" th:text="${#numbers.formatDecimal(req.cbm, 2, 'COMMA', 2, 'POINT')} + ' CBM'"></p>
+            </div>
+
+            <div class="progress-tracker-large">
+                <div class="step" th:classappend="${#lists.contains({'ACCEPTED','CONFIRMED','SHIPPED','COMPLETED','RESOLD'}, req.detailedStatus)} ? 'is-complete' : ''"><div class="dot"></div><div class="label">낙찰</div></div>
+                <div class="step" th:classappend="${#lists.contains({'CONFIRMED','SHIPPED','COMPLETED'}, req.detailedStatus)} ? 'is-complete' : ''"><div class="dot"></div><div class="label">컨테이너 확정</div></div>
+                <div class="step" th:classappend="${#lists.contains({'SHIPPED','COMPLETED'}, req.detailedStatus)} ? 'is-complete' : ''"><div class="dot"></div><div class="label">선적완료</div></div>
+                <div class="step" th:classappend="${#lists.contains({'COMPLETED'}, req.detailedStatus)} ? 'is-complete' : ''"><div class="dot"></div><div class="label">운송완료</div></div>
+            </div>
+
+            <div class="winner-info">
+                <span class="label">담당 포워더</span>
+                <span class="company-name" th:text="${req.winningBidderCompanyName}"></span>
+            </div>
+        </div>
+    </th:block>
+
+    <th:block th:if="${req.status == 'OPEN' and #temporals.createNow().isAfter(req.deadlineDateTime)}">
+        <div class="info">
+             <h3 class="item-name" th:text="${req.itemName}"></h3>
+            <p class="cbm" th:text="${#numbers.formatDecimal(req.cbm, 2, 'COMMA', 2, 'POINT')} + ' CBM'"></p>
+            <p class="deadline" th:text="'마감: ' + ${req.deadline}"></p>
+            <p class="desired-arrival-date" th:if="${req.desiredArrivalDate != null}"
+               th:text="'희망 도착: ' + ${#temporals.format(req.desiredArrivalDate, 'yyyy-MM-dd')}"></p>
+        </div>
+        <div class="actions">
+            <span class="status-badge closed">마감</span>
+        </div>
+    </th:block>
+
+</article>
                             <div class="offer-details-container"></div>
                         </div>
 
@@ -124,8 +148,14 @@
                 <div class="form-grid">
                     <input type="text" id="departurePort" class="form-input" placeholder="출발항 (예: 부산)" required>
                     <input type="text" id="arrivalPort" class="form-input" placeholder="도착항 (예: 도쿄)" required>
-                    <input type="datetime-local" id="deadline" class="form-input" required>
-                    <input type="date" id="desiredArrivalDate" class="form-input" required> 
+                    <div class="form-row" style="grid-column: 1 / -1;">
+                        <label for="desiredArrivalDate" style="font-size:14px; margin-bottom: 4px; display:block;">희망 도착일</label>
+                        <input type="date" id="desiredArrivalDate" class="form-input">
+                    </div>
+                    <div class="form-row" style="grid-column: 1 / -1;">
+                        <label for="desiredArrivalDate" style="font-size:14px; margin-bottom: 4px; display:block;">요청 마감일</label>
+                        <input type="datetime-local" id="deadline" class="form-input">
+                    </div>
                     <select id="tradeType" class="form-input"><option value="수출">수출</option><option value="수입">수입</option></select>
                     <select id="transportType" class="form-input"><option value="해상">해상</option><option value="항공">항공</option></select>
                 </div>

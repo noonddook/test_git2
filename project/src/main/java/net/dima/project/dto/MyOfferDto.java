@@ -24,27 +24,28 @@ public class MyOfferDto {
     private boolean isFullySettled; // [✅ 추가]
 
     public static MyOfferDto fromEntity(OfferEntity entity) {
-        OfferStatus status = entity.getStatus(); // [✅ 1. 수정] 타입을 String -> OfferStatus로 변경
+        OfferStatus status = entity.getStatus();
         String statusText;
         
-        if (status == OfferStatus.FOR_SALE && LocalDateTime.now().isAfter(entity.getRequest().getDeadline())) {
+        // [✅ 핵심 수정] '진행중' 상태일 때 마감 시간을 확인하는 로직 추가
+        if (status == OfferStatus.PENDING && LocalDateTime.now().isAfter(entity.getRequest().getDeadline())) {
+            status = OfferStatus.REJECTED; // 화면에 보여줄 상태를 '거절'로 변경
+            statusText = "거절";
+        } else if (status == OfferStatus.FOR_SALE && LocalDateTime.now().isAfter(entity.getRequest().getDeadline())) {
             statusText = "확정 (재판매 마감)";
-            status = OfferStatus.ACCEPTED; // 화면 표시용으로 임시 변경
+            status = OfferStatus.ACCEPTED;
         } else {
-            // [✅ 2. 수정] switch문이 Enum을 직접 비교하도록 변경
-            // [✅ 수정] switch문에 CONFIRMED 케이스 추가
+            // 그 외의 경우는 기존 로직을 따름
             switch (status) {
                 case PENDING: statusText = "진행중"; break;
                 case ACCEPTED: statusText = "수락"; break;
                 case REJECTED: statusText = "거절"; break;
                 case FOR_SALE: statusText = "재판매중"; break;
                 case RESOLD: statusText = "재판매 완료"; break;
-                case CONFIRMED: statusText = "확정"; break; // [✅ 추가]
+                case CONFIRMED: statusText = "확정"; break;
                 default: statusText = status.name();
             }
         }
-        
-        
 
         return MyOfferDto.builder()
                 .offerId(entity.getOfferId())
@@ -54,7 +55,7 @@ public class MyOfferDto {
                 .arrivalPort(entity.getRequest().getArrivalPort())
                 .departureDate(entity.getContainer().getEtd().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")))
                 .cbm(entity.getRequest().getCargo().getTotalCbm())
-                .status(status.name()) // [✅ 3. 수정] Enum을 String으로 변환 (.name() 사용)
+                .status(status.name()) // 변경된 상태를 사용
                 .statusText(statusText)
                 .deadline(entity.getRequest().getDeadline())
                 .build();

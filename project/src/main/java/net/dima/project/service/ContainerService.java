@@ -25,7 +25,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.Comparator; // [✅ import 추가]
 import org.springframework.data.domain.Sort; // [✅ import 추가]
-
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -54,6 +54,7 @@ public class ContainerService {
         // 'availableCbm'은 DB에 없는 계산 필드이므로, Java에서 직접 정렬해야 합니다.
         final String sortBy = sort.get().findFirst().map(Sort.Order::getProperty).orElse("containerId");
         final Sort.Direction direction = sort.get().findFirst().map(Sort.Order::getDirection).orElse(Sort.Direction.ASC);
+        final LocalDateTime now = LocalDateTime.now();
 
         // DB에서 직접 정렬 가능한 필드는 DB에 위임하고, 아니라면 기본 정렬로 가져옵니다.
         Sort dbSort = sortBy.equals("availableCbm") ? Sort.by("containerId").ascending() : sort;
@@ -80,10 +81,16 @@ public class ContainerService {
                     .sum();
             
             double resaleCbm = offers.stream().filter(o -> o.getStatus() == OfferStatus.FOR_SALE).mapToDouble(o -> o.getRequest().getCargo().getTotalCbm()).sum();
+            // [✅ 이 부분을 아래와 같이 수정해주세요]
             double biddingCbm = offers.stream()
-                    .filter(o -> o.getStatus() == OfferStatus.PENDING) // 상태가 PENDING인 제안만 필터링
-                    .mapToDouble(o -> o.getRequest().getCargo().getTotalCbm()) // CBM을 가져와서
-                    .sum(); // 모두 더함
+                    .filter(o -> 
+                        // 조건 1: 제안 상태가 'PENDING'이고,
+                        o.getStatus() == OfferStatus.PENDING &&
+                        // 조건 2: 요청의 마감일이 지나지 않았을 때만 필터링
+                        o.getRequest().getDeadline().isAfter(now)
+                    )
+                    .mapToDouble(o -> o.getRequest().getCargo().getTotalCbm())
+                    .sum();
             
             List<ContainerCargoEntity> externalCargos = containerCargoRepository.findExternalCargosByContainerId(container.getContainerId(), true);
             double externalCbm = externalCargos.stream().mapToDouble(ContainerCargoEntity::getCbmLoaded).sum();

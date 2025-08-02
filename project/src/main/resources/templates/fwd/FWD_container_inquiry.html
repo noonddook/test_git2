@@ -110,59 +110,67 @@
                             </div>
                         </div>
 
-                        <th:block th:switch="${c.status.name()}">
-                            <th:block th:case="'SCHEDULED'">
-                                <div class="card-body">
-                                    <div class="cbm-status-grid">
-                                        <div class="cbm-item">
-                                            <p class="title">확정</p>
-                                            <p class="amount"
-                                                th:text="${#numbers.formatDecimal(c.confirmedCbm, 1, 2)} + ' CBM'"></p>
-                                            <button class="btn btn-sm btn-secondary">상세보기</button>
-                                        </div>
-                                        <div class="cbm-item">
-                                            <p class="title">재판매중</p>
-                                            <p class="amount"
-                                                th:text="${#numbers.formatDecimal(c.resaleCbm, 1, 2)} + ' CBM'"></p>
-                                            <button class="btn btn-sm btn-secondary">상세보기</button>
-                                        </div>
-                                        <div class="cbm-item">
-                                            <p class="title">입찰중</p>
-                                            <p class="amount"
-                                                th:text="${#numbers.formatDecimal(c.biddingCbm, 1, 2)} + ' CBM'"></p>
-                                            <button class="btn btn-sm btn-secondary">상세보기</button>
-                                        </div>
-                                        <div class="cbm-item available">
-                                            <p class="title">입찰가능</p>
-                                            <p class="amount"
-                                                th:text="${#numbers.formatDecimal(c.availableCbm, 1, 2)} + ' CBM'"></p>
-                                            <button class="btn btn-sm btn-primary">추가입찰</button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="card-footer">
-                                    <div class="cbm-progress-bar">
-                                        <div class="progress-segment confirmed" th:if="${c.getConfirmedPercent() > 0}"
-                                            th:style="'width: ' + ${c.getConfirmedPercent()} + '%;'"></div>
-                                        <div class="progress-segment resale" th:if="${c.getResalePercent() > 0}"
-                                            th:style="'width: ' + ${c.getResalePercent()} + '%;'"></div>
-                                        <div class="progress-segment bidding" th:if="${c.getBiddingPercent() > 0}"
-                                            th:style="'width: ' + ${c.getBiddingPercent()} + '%;'"></div>
-                                    </div>
-                                </div>
-                            </th:block>
+<th:block th:switch="${c.status.name()}">
+    <th:block th:case="'SCHEDULED'">
+        <div class="card-body">
+            <div class="cbm-status-grid">
+                <div class="cbm-item">
+                    <div class="status-color-bar confirmed"></div>
+                    <p class="title">확정</p>
+                    <p class="amount" th:text="${#numbers.formatDecimal(c.confirmedCbm, 1, 2)} + ' CBM'"></p>
+                    <button class="btn btn-sm btn-secondary">상세보기</button>
+                </div>
+                <div class="cbm-item">
+                    <div class="status-color-bar resale"></div>
+                    <p class="title">재판매중</p>
+                    <p class="amount" th:text="${#numbers.formatDecimal(c.resaleCbm, 1, 2)} + ' CBM'"></p>
+                    <button class="btn btn-sm btn-secondary">상세보기</button>
+                </div>
+                <div class="cbm-item">
+                    <div class="status-color-bar bidding"></div>
+                    <p class="title">입찰중</p>
+                    <p class="amount" th:text="${#numbers.formatDecimal(c.biddingCbm, 1, 2)} + ' CBM'"></p>
+                    <button class="btn btn-sm btn-secondary">상세보기</button>
+                </div>
+                <div class="cbm-item available">
+                    <div class="status-color-bar"></div>
+                    <p class="title">입찰가능</p>
+                    <p class="amount" th:text="${#numbers.formatDecimal(c.availableCbm, 1, 2)} + ' CBM'"></p>
+                    <button class="btn btn-sm btn-primary">추가입찰</button>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer">
+            <div class="cbm-progress-bar">
+                <div class="progress-segment confirmed" th:if="${c.getConfirmedPercent() > 0}"
+                    th:style="'width: ' + ${c.getConfirmedPercent()} + '%;'"></div>
+                <div class="progress-segment resale" th:if="${c.getResalePercent() > 0}"
+                    th:style="'width: ' + ${c.getResalePercent()} + '%;'"></div>
+                <div class="progress-segment bidding" th:if="${c.getBiddingPercent() > 0}"
+                    th:style="'width: ' + ${c.getBiddingPercent()} + '%;'"></div>
+            </div>
+        </div>
+    </th:block>
 
-                            <div th:case="*" class="card-body confirmed-view">
-                                <div class="confirmed-cbm-item">
-                                    <p class="title"
-                                        th:text="${c.status.name() == 'CONFIRMED'} ? '확정완료' : (${c.status.name() == 'SHIPPED'} ? '선적완료 (운송중)' : '운송완료')">
-                                    </p>
-                                    <p class="amount"
-                                        th:text="${#numbers.formatDecimal(c.confirmedCbm, 1, 2)} + ' CBM'"></p>
-                                    <button class="btn btn-sm btn-secondary">상세보기</button>
-                                </div>
-                            </div>
-                        </th:block>
+    <th:block th:case="*">
+		<div class="card-body finalized-view">
+		     <div class="progress-tracker">
+		                <div class="step" th:classappend="${#lists.contains({'CONFIRMED', 'SHIPPED', 'COMPLETED', 'SETTLED'}, c.status.name())} ? 'is-complete' : ''"><div class="dot"></div><div class="label">컨테이너 확정</div></div>
+		                <div class="step" th:classappend="${#lists.contains({'SHIPPED', 'COMPLETED', 'SETTLED'}, c.status.name())} ? 'is-complete' : ''"><div class="dot"></div><div class="label">선적완료</div></div>
+		                <div class="step" th:classappend="${#lists.contains({'COMPLETED', 'SETTLED'}, c.status.name())} ? 'is-complete' : ''"><div class="dot"></div><div class="label">운송완료</div></div>
+		     </div>
+		
+		            <div class="finalized-info">
+		                <div class="info-item">
+		                    <span class="label">총 확정 물량</span>
+		                    <span class="amount" th:text="${#numbers.formatDecimal(c.confirmedCbm, 2, 'COMMA', 2, 'POINT')} + ' CBM'"></span>
+		                    <button class="btn btn-sm btn-secondary btn-view-finalized-details"
+		                            th:attr="data-container-id=${c.containerId}">상세보기</button>
+		                </div>
+		            </div>
+		 </div>
+    </th:block>
+</th:block>
 
                         <div class="details-table-container"></div>
                     </article>

@@ -151,3 +151,14 @@
     background-color: #fdeded;
     color: #d32f2f;
 }
+
+/* /static/css/pages/FWD_transaction_history.css 파일 맨 아래에 추가 */
+
+/* 거래내역 합계 모달의 내용(body) 부분 스타일 수정 */
+#summary-modal .modal-body {
+    /* 화면 높이의 최대 60%까지만 커지도록 제한 */
+    max-height: 60vh;
+    
+    /* 내용이 max-height를 넘어가면 자동으로 세로 스크롤바 생성 */
+    overflow-y: auto;
+}

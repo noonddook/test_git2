@@ -72,6 +72,8 @@ public class ResaleService {
                 .deadline(originalOffer.getRequest().getDeadline())
                 .tradeType(originalOffer.getRequest().getTradeType())
                 .transportType(originalOffer.getRequest().getTransportType())
+                // [✅ 핵심 수정] 원본 요청의 희망 도착일을 그대로 복사합니다.
+                .desiredArrivalDate(originalOffer.getRequest().getDesiredArrivalDate())
                 .status(RequestStatus.OPEN)
                 .sourceOffer(originalOffer)
                 .build();

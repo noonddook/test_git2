@@ -450,3 +450,31 @@
 .btn-remove-pill:hover {
     color: var(--danger-color);
 }
+
+/* /static/css/pages/CUS_request.css 파일 맨 아래에 추가 */
+
+/* 마감된 카드 스타일 */
+.request-card.is-closed {
+    background-color: #f8f9fa; /* 배경을 약간 회색으로 */
+    opacity: 0.7; /* 살짝 투명하게 */
+}
+
+.request-card.is-closed:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: var(--border-color);
+}
+
+.request-card.is-closed .btn {
+    pointer-events: none; /* 클릭 비활성화 */
+}
+
+/* 마감 배지 스타일 */
+.status-badge.closed {
+    background-color: #6c757d; /* 어두운 회색 */
+    color: white;
+    padding: 8px 16px;
+    border-radius: var(--border-radius-pill);
+    font-size: 14px;
+    font-weight: 700;
+}

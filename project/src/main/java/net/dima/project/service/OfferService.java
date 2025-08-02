@@ -21,6 +21,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import jakarta.persistence.criteria.Join;       // [✅ 이 줄을 추가해주세요]
 import jakarta.persistence.criteria.Predicate;
+import org.springframework.data.domain.PageImpl; // [✅ PageImpl import 추가]
+import java.util.stream.Collectors; // [✅ Collectors import 추가]
 
 import java.util.ArrayList; // [✅ import 추가]
 
@@ -78,7 +80,6 @@ public class OfferService {
 
         Specification<OfferEntity> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
-
             predicates.add(cb.equal(root.get("forwarder"), forwarder));
 
             // ★★★ 핵심 수정: 제외할 상태 목록을 정의하고, 해당 상태가 아닌 것만 조회하도록 변경 ★★★
@@ -123,8 +124,30 @@ public class OfferService {
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
-        Page<OfferEntity> offerPage = offerRepository.findAll(spec, pageable);
-        return offerPage.map(MyOfferDto::fromEntity);
+        // 2. [수정] DB에서는 페이징 없이 '정렬'만 적용하여 모든 관련 데이터를 가져옵니다.
+        List<OfferEntity> allOfferEntities = offerRepository.findAll(spec, pageable.getSort());
+
+        // 3. DTO로 변환합니다. (이 과정에서 마감된 '진행중'이 '거절'로 바뀝니다)
+        List<MyOfferDto> allDtos = allOfferEntities.stream()
+                .map(MyOfferDto::fromEntity)
+                .collect(Collectors.toList());
+
+        // 4. [핵심] DTO로 변환된 '최종 상태값'을 기준으로 필터링합니다.
+        List<MyOfferDto> filteredDtos;
+        if (status != null && !status.isEmpty()) {
+            filteredDtos = allDtos.stream()
+                .filter(dto -> status.equalsIgnoreCase(dto.getStatus()))
+                .collect(Collectors.toList());
+        } else {
+            filteredDtos = allDtos; // 필터가 없으면 전체 목록 사용
+        }
+
+        // 5. 필터링된 최종 목록을 가지고 수동으로 페이지네이션 객체를 만듭니다.
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), filteredDtos.size());
+        List<MyOfferDto> pageContent = (start > end) ? List.of() : filteredDtos.subList(start, end);
+        
+        return new PageImpl<>(pageContent, pageable, filteredDtos.size());
     }
     /**
      * '나의제안조회' 상세보기를 위한 서비스 로직

@@ -15,4 +15,6 @@ public class TransactionHistoryDto {
     private BigDecimal price;              // 거래 금액
     private String currency;               // 통화
     private String status;                 // 최종 상태 (운송완료 등)
+    private String departurePort; // [✅ 추가]
+    private String arrivalPort;   // [✅ 추가]
 }

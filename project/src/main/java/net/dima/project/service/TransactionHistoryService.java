@@ -9,9 +9,10 @@ import net.dima.project.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;   
-import org.springframework.data.domain.Pageable; 
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -27,105 +28,106 @@ public class TransactionHistoryService {
     private final RequestRepository requestRepository;
     private final OfferRepository offerRepository;
 
-    public List<TransactionHistoryDto> getTransactionHistory(String currentUserId) {
-        List<TransactionHistoryDto> sales = getSalesHistory(currentUserId);
-        List<TransactionHistoryDto> purchases = getPurchaseHistory(currentUserId);
+    // ★★★ 1. 이 메서드가 아래 두 메서드에 파라미터를 전달합니다 ★★★
+    public List<TransactionHistoryDto> getTransactionHistory(String currentUserId, LocalDate startDate, LocalDate endDate, String keyword) {
+        List<TransactionHistoryDto> sales = getSalesHistory(currentUserId, startDate, endDate, keyword);
+        List<TransactionHistoryDto> purchases = getPurchaseHistory(currentUserId, startDate, endDate, keyword);
 
-        // 판매내역과 구매내역을 합친 후 날짜순으로 정렬
         return Stream.concat(sales.stream(), purchases.stream())
                 .sorted(Comparator.comparing(TransactionHistoryDto::getTransactionDate).reversed())
                 .collect(Collectors.toList());
     }
 
-    public List<TransactionHistoryDto> getSalesHistory(String currentUserId) {
+    // ★★★ 2. getSalesHistory 메서드가 모든 파라미터를 받도록 수정 ★★★
+    public List<TransactionHistoryDto> getSalesHistory(String currentUserId, LocalDate startDate, LocalDate endDate, String keyword) {
         UserEntity user = userRepository.findByUserId(currentUserId);
         List<RequestEntity> myResaleRequests = requestRepository.findByRequesterAndStatusAndSourceOfferIsNotNull(user, RequestStatus.CLOSED);
 
         return myResaleRequests.stream().map(req -> {
-            // 각 재판매 요청의 낙찰된 제안을 찾습니다.
             OfferEntity winningOffer = offerRepository.findAllByRequest(req)
                     .stream()
                     .filter(o -> o.getStatus() != OfferStatus.PENDING && o.getStatus() != OfferStatus.REJECTED)
                     .findFirst()
                     .orElse(null);
 
-            if (winningOffer == null) return null;
-
-            // ★★★ 핵심 수정 ★★★
-            // 해당 제안이 실린 컨테이너의 상태가 'SETTLED'가 아니면 거래내역에 포함하지 않습니다.
-            if (winningOffer.getContainer().getStatus() != ContainerStatus.SETTLED) {
+            if (winningOffer == null || winningOffer.getContainer().getStatus() != ContainerStatus.SETTLED) {
                 return null;
             }
 
-            // 'SETTLED' 상태인 경우에만 DTO로 변환하여 반환합니다.
             return TransactionHistoryDto.builder()
                     .transactionDate(winningOffer.getCreatedAt())
                     .type("판매")
                     .itemName(req.getCargo().getItemName())
+                    .departurePort(req.getDeparturePort())
+                    .arrivalPort(req.getArrivalPort())
                     .partnerName(winningOffer.getForwarder().getCompanyName())
                     .price(winningOffer.getPrice())
                     .currency(winningOffer.getCurrency())
-                    .status("정산완료") // 상태를 '정산완료'로 고정
+                    .status("정산완료")
                     .build();
-        }).filter(dto -> dto != null).collect(Collectors.toList());
+        })
+        .filter(dto -> dto != null)
+        .filter(dto -> (startDate == null || !dto.getTransactionDate().toLocalDate().isBefore(startDate)))
+        .filter(dto -> (endDate == null || !dto.getTransactionDate().toLocalDate().isAfter(endDate)))
+        .filter(dto -> (keyword == null || keyword.isBlank() ||
+                (dto.getItemName() != null && dto.getItemName().toLowerCase().contains(keyword.toLowerCase())) ||
+                (dto.getPartnerName() != null && dto.getPartnerName().toLowerCase().contains(keyword.toLowerCase()))))
+        .collect(Collectors.toList());
     }
 
-    public List<TransactionHistoryDto> getPurchaseHistory(String currentUserId) {
+    // ★★★ 3. getPurchaseHistory 메서드가 모든 파라미터를 받도록 수정 ★★★
+    public List<TransactionHistoryDto> getPurchaseHistory(String currentUserId, LocalDate startDate, LocalDate endDate, String keyword) {
         UserEntity user = userRepository.findByUserId(currentUserId);
-        // 내가 제안자(forwarder)이고, 최종적으로 거래가 성사된(ACCEPTED 이상) 제안들을 찾음
         List<OfferStatus> completedStatuses = List.of(
-        		OfferStatus.ACCEPTED
-        		,OfferStatus.CONFIRMED
-        		,OfferStatus.RESOLD
-        		,OfferStatus.SHIPPED
-        		,OfferStatus.COMPLETED);
+                OfferStatus.ACCEPTED, OfferStatus.CONFIRMED, OfferStatus.RESOLD,
+                OfferStatus.SHIPPED, OfferStatus.COMPLETED);
         List<OfferEntity> myPurchases = offerRepository.findByForwarderAndStatusIn(user, completedStatuses);
 
-
         return myPurchases.stream()
-                // ★★★ 핵심 수정 1: 컨테이너 상태가 'SETTLED'인 거래만 필터링합니다. ★★★
                 .filter(offer -> offer.getContainer() != null && offer.getContainer().getStatus() == ContainerStatus.SETTLED)
                 .map(offer ->
                         TransactionHistoryDto.builder()
                                 .transactionDate(offer.getCreatedAt())
                                 .type("구매")
                                 .itemName(offer.getRequest().getCargo().getItemName())
+                                .departurePort(offer.getRequest().getDeparturePort())
+                                .arrivalPort(offer.getRequest().getArrivalPort())
                                 .partnerName(offer.getRequest().getRequester().getCompanyName())
                                 .price(offer.getPrice())
                                 .currency(offer.getCurrency())
-                                // ★★★ 핵심 수정 2: 상태 텍스트를 "정산완료"로 직접 지정합니다. ★★★
                                 .status("정산완료")
                                 .build()
-                ).collect(Collectors.toList());
+                )
+                .filter(dto -> (startDate == null || !dto.getTransactionDate().toLocalDate().isBefore(startDate)))
+                .filter(dto -> (endDate == null || !dto.getTransactionDate().toLocalDate().isAfter(endDate)))
+                .filter(dto -> (keyword == null || keyword.isBlank() ||
+                        (dto.getItemName() != null && dto.getItemName().toLowerCase().contains(keyword.toLowerCase())) ||
+                        (dto.getPartnerName() != null && dto.getPartnerName().toLowerCase().contains(keyword.toLowerCase()))))
+                .collect(Collectors.toList());
     }
-    
+
     public Page<TransactionHistoryDto> getShipperHistory(String currentUserId, Pageable pageable) {
         UserEntity shipper = userRepository.findByUserId(currentUserId);
-
-        // 1. 화주가 올린 원본 요청 중, 마감된 요청만 모두 가져옵니다.
         List<RequestEntity> closedRequests = requestRepository.findByRequesterAndSourceOfferIsNullAndStatus(shipper, RequestStatus.CLOSED);
 
-        // 2. 각 요청의 최종 낙찰 정보를 찾아 DTO로 변환합니다.
         List<TransactionHistoryDto> historyList = closedRequests.stream()
                 .map(req -> {
-                    Optional<OfferEntity> finalOfferOpt = findFinalOffer(req); // 최종 운송 제안 추적
-                    
+                    Optional<OfferEntity> finalOfferOpt = findFinalOffer(req);
                     return finalOfferOpt.map(finalOffer -> TransactionHistoryDto.builder()
                             .transactionDate(finalOffer.getCreatedAt())
-                            .type("요청") // 화주 입장에서는 '판매'가 아닌 '요청'이 더 적합
+                            .type("요청")
                             .itemName(req.getCargo().getItemName())
-                            .partnerName(finalOffer.getForwarder().getCompanyName()) // 최종 담당 포워더
+                            .partnerName(finalOffer.getForwarder().getCompanyName())
                             .price(finalOffer.getPrice())
                             .currency(finalOffer.getCurrency())
                             .status(finalOffer.getContainer().getStatus().name())
                             .build()
-                    ).orElse(null); // 최종 낙찰자가 없는 경우는 제외
+                    ).orElse(null);
                 })
                 .filter(dto -> dto != null)
                 .sorted(Comparator.comparing(TransactionHistoryDto::getTransactionDate).reversed())
                 .collect(Collectors.toList());
 
-        // 3. 수동으로 페이지네이션 객체를 생성합니다.
         int start = (int) pageable.getOffset();
         int end = Math.min((start + pageable.getPageSize()), historyList.size());
         List<TransactionHistoryDto> pageContent = (start > end) ? List.of() : historyList.subList(start, end);
@@ -133,9 +135,6 @@ public class TransactionHistoryService {
         return new PageImpl<>(pageContent, pageable, historyList.size());
     }
 
-    /**
-     * [신규] 재판매 체인을 추적하여 최종 운송 Offer를 찾는 헬퍼 메서드
-     */
     private Optional<OfferEntity> findFinalOffer(RequestEntity request) {
         Optional<OfferEntity> winningOfferOpt = offerRepository.findAllByRequest(request).stream()
                 .filter(o -> o.getStatus() != OfferStatus.PENDING && o.getStatus() != OfferStatus.REJECTED)

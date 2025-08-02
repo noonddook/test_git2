@@ -8,10 +8,12 @@ import net.dima.project.service.OfferService;
 import net.dima.project.service.ResaleService;
 import net.dima.project.service.TransactionHistoryService;
 
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -254,18 +256,30 @@ public class FwdApiController {
     
     // [✅ 추가] 거래내역 조회 API 3종
     @GetMapping("/transactions")
-    public ResponseEntity<List<TransactionHistoryDto>> getTransactions(Authentication authentication) {
-        return ResponseEntity.ok(transactionHistoryService.getTransactionHistory(authentication.getName()));
+    public ResponseEntity<List<TransactionHistoryDto>> getTransactions(
+            Authentication authentication,
+            @RequestParam(name = "startDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(name = "endDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(name = "keyword", required = false) String keyword) {
+        return ResponseEntity.ok(transactionHistoryService.getTransactionHistory(authentication.getName(), startDate, endDate, keyword));
     }
 
     @GetMapping("/transactions/sales")
-    public ResponseEntity<List<TransactionHistoryDto>> getSales(Authentication authentication) {
-        return ResponseEntity.ok(transactionHistoryService.getSalesHistory(authentication.getName()));
+    public ResponseEntity<List<TransactionHistoryDto>> getSales(
+            Authentication authentication,
+            @RequestParam(name = "startDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(name = "endDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(name = "keyword", required = false) String keyword) {
+        return ResponseEntity.ok(transactionHistoryService.getSalesHistory(authentication.getName(), startDate, endDate, keyword));
     }
 
     @GetMapping("/transactions/purchases")
-    public ResponseEntity<List<TransactionHistoryDto>> getPurchases(Authentication authentication) {
-        return ResponseEntity.ok(transactionHistoryService.getPurchaseHistory(authentication.getName()));
+    public ResponseEntity<List<TransactionHistoryDto>> getPurchases(
+            Authentication authentication,
+            @RequestParam(name = "startDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(name = "endDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(name = "keyword", required = false) String keyword) {
+        return ResponseEntity.ok(transactionHistoryService.getPurchaseHistory(authentication.getName(), startDate, endDate, keyword));
     }
     
     @PostMapping("/containers/{containerId}/settle")

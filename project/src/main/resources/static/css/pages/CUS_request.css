@@ -478,3 +478,10 @@
     font-size: 14px;
     font-weight: 700;
 }
+
+/* /static/css/pages/CUS_request.css 파일 맨 아래에 추가 */
+
+/* 필터 버튼 그룹 간격 조절 */
+.filter-group .filter-spacer {
+    margin-left: 20px; /* 버튼 왼쪽에 간격을 줍니다 */
+}

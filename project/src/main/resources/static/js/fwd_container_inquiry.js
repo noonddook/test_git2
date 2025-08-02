@@ -140,12 +140,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 fetchApi(`/api/fwd/containers/${containerId}/complete`, 'POST', '운송완료');
             }
         }
-        // '외부 화물 삭제' 버튼 (상세보기 내부)
+        // '정산' 버튼 (상세보기 내부)
 		else if (target.matches('.btn-settle-container')) {
 		    if (confirm(`컨테이너(${containerId})를 '정산완료' 처리하시겠습니까?\n이후 목록에서 사라지며 거래내역에서 확인할 수 있습니다.`)) {
 		        fetchApi(`/api/fwd/containers/${containerId}/settle`, 'POST', '정산완료');
 		    }
         }
+		
+		// 외부서류삭제버튼
+		else if (target.matches('.btn-delete-external')) {
+		    const cargoId = target.dataset.cargoId;
+		    if (confirm(`외부 등록 화물(ID: ${cargoId})을 정말로 삭제하시겠습니까?`)) {
+		        fetchApi(`/api/fwd/external-cargo/${cargoId}`, 'DELETE', '삭제');
+		    }
+		}
 		
 		// [✅ 추가] '마켓에 올리기' 버튼 (상세보기 내부)
 		else if (target.matches('.btn-resale-from-details')) {

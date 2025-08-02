@@ -82,7 +82,7 @@ public class RequestService {
 
     // ★★★ 핵심: 중복 메서드를 하나로 합치고, excludeClosed 파라미터를 추가했습니다 ★★★
     @Transactional(readOnly = true)
-    public Page<MyPostedRequestDto> getRequestsForShipper(String currentUserId, String status, boolean excludeClosed, Pageable pageable) {
+    public Page<MyPostedRequestDto> getRequestsForShipper(String currentUserId, String status, boolean excludeClosed, String itemName, Pageable pageable) {
         UserEntity shipper = userRepository.findByUserId(currentUserId);
         
         // 1. DB에서 나의 모든 원본 요청을 가져옵니다.
@@ -92,16 +92,31 @@ public class RequestService {
 
         // [✅ 2. 핵심 추가] 마감 제안 제외 필터링 로직
         // DTO로 변환하기 전에 원본 Entity 리스트를 먼저 필터링합니다.
-        List<RequestEntity> filteredByDeadline = allMyRequests.stream()
+        // [✅ 핵심 수정] 정산 완료(SETTLED)된 요청을 제외하는 필터링 로직 추가
+        List<RequestEntity> filteredRequests = allMyRequests.stream()
+                .filter(req -> {
+                    // 요청이 'CLOSED' 상태일 때만 정산 완료 여부를 확인
+                    if (req.getStatus() == RequestStatus.CLOSED) {
+                        // 최종 연결된 컨테이너의 상태가 SETTLED가 아닌 경우에만 목록에 포함
+                        return findFinalOffer(req)
+                                .map(offer -> offer.getContainer().getStatus() != ContainerStatus.SETTLED)
+                                .orElse(true); // 최종 제안을 찾을 수 없는 경우(예외 상황)에는 일단 포함
+                    }
+                    // 'OPEN' 상태인 요청은 항상 포함
+                    return true;
+                })
+                // 기존의 '마감 제안 제외' 필터링 로직은 그대로 유지
                 .filter(req -> 
-                    !excludeClosed || // '마감 제안 제외'가 꺼져있으면 모든 요청 통과
-                    (req.getStatus() == RequestStatus.OPEN && req.getDeadline().isAfter(now)) || // OPEN 상태이면서 마감일이 지나지 않았으면 통과
-                    (req.getStatus() == RequestStatus.CLOSED) // 이미 CLOSED 된(낙찰된) 요청은 항상 표시
+                    !excludeClosed ||
+                    (req.getStatus() == RequestStatus.OPEN && req.getDeadline().isAfter(now)) ||
+                    (req.getStatus() == RequestStatus.CLOSED)
                 )
                 .collect(Collectors.toList());
+        
+
 
         // 3. 필터링된 요청들을 DTO로 변환합니다.
-        List<MyPostedRequestDto> dtoList = filteredByDeadline.stream().map(req -> {
+        List<MyPostedRequestDto> dtoList = filteredRequests.stream().map(req -> {
             // ... (기존 DTO 변환 로직은 동일) ...
             if (req.getStatus() == RequestStatus.OPEN) {
                 long bidderCount = offerRepository.countByRequest(req);
@@ -112,10 +127,20 @@ public class RequestService {
             }
         }).collect(Collectors.toList());
         
+        // [✅ 핵심 추가] DTO 리스트를 itemName으로 최종 필터링합니다.
+        List<MyPostedRequestDto> searchedList;
+        if (itemName != null && !itemName.isBlank()) {
+            searchedList = dtoList.stream()
+                .filter(dto -> dto.getItemName().toLowerCase().contains(itemName.toLowerCase()))
+                .collect(Collectors.toList());
+        } else {
+            searchedList = dtoList;
+        }
+        
         // 4. 상태(status) 탭 필터를 적용합니다.
         List<MyPostedRequestDto> filteredList;
         if (status != null && !status.isEmpty()) {
-            filteredList = dtoList.stream()
+        	filteredList = searchedList.stream()
                     .filter(dto -> {
                         if ("OPEN".equalsIgnoreCase(status)) {
                             return "OPEN".equals(dto.getStatus());
@@ -124,7 +149,7 @@ public class RequestService {
                     })
                     .collect(Collectors.toList());
         } else {
-            filteredList = dtoList;
+        	filteredList = searchedList;
         }
 
         // 5. 최종 목록으로 페이지네이션 객체를 만듭니다.

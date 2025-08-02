@@ -40,16 +40,18 @@ public class CusController {
                              @RequestParam(name = "status", required = false) String status,
                              // ★★★ 핵심 수정 1: excludeClosed 파라미터를 받도록 추가 ★★★
                              @RequestParam(name = "excludeClosed", defaultValue = "true") boolean excludeClosed,
+                             @RequestParam(name = "itemName", required = false) String itemName,
                              @PageableDefault(size = 5, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         
         String userId = authentication.getName();
         // [✅ 수정] 서비스 호출 시 excludeClosed 값을 함께 전달합니다.
-        Page<MyPostedRequestDto> requestPage = requestService.getRequestsForShipper(userId, status, excludeClosed, pageable);
+        Page<MyPostedRequestDto> requestPage = requestService.getRequestsForShipper(userId, status, excludeClosed, itemName, pageable);
 
         model.addAttribute("requestPage", requestPage);
         model.addAttribute("activeMenu", "cusRequest");
         model.addAttribute("status", status);
         model.addAttribute("excludeClosed", excludeClosed);  // [✅ 추가] 뷰에서 현재 필터 상태를 알 수 있도록 모델에 값을 추가합니다.
+        model.addAttribute("itemName", itemName); 
         
         return "cus/CUS_request";
     }

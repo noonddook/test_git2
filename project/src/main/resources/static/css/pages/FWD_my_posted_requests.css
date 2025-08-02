@@ -255,3 +255,30 @@
 .bids-table th, .bids-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #dee2e6; }
 .bids-table th { background-color: #f8f9fa; font-weight: 500; }
 .bids-table tbody tr:hover { background-color: #f1f3f5; }
+
+
+/* /static/css/pages/FWD_my_posted_requests.css 파일 맨 아래에 추가 */
+
+/* --- 펼쳐지는 상세 보기 영역 스타일 --- */
+.offer-details-container {
+    background-color: #f8f9fa; /* 배경색 */
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease-out, padding 0.4s ease-out; /* 부드러운 애니메이션 */
+    border: 1px solid #dee2e6;
+    border-top: none;
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
+    margin-top: -1px; /* 카드와 경계선이 겹치도록 */
+}
+
+/* JS로 is-expanded 클래스가 추가되면 펼쳐짐 */
+.request-item-container.is-expanded .offer-details-container {
+    max-height: 1000px; /* 충분한 높이 */
+    padding: 1.5rem;
+}
+
+/* 카드가 펼쳐졌을 때, 하단 모서리를 각지게 만듦 */
+.request-item-container.is-expanded .request-card {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}

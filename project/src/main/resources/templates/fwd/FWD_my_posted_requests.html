@@ -30,46 +30,47 @@
                             <a th:href="@{/fwd/my-posted-requests(status='COMPLETED')}" class="btn" th:classappend="${status == 'COMPLETED'} ? 'is-active'">도착</a>
                         </div>
                     </div>
-                    <div class="posted-request-list">
-                        <div th:if="${myRequestsPage.empty}" class="no-results-message">조회된 요청이 없습니다.</div>
-<article class="card request-card" th:each="req : ${myRequestsPage.content}" th:attr="data-request-id=${req.requestId}">
-    
-    <th:block th:if="${req.status == 'OPEN'}">
-        <div class="info">
-            <h3 class="item-name" th:text="${req.itemName}"></h3>
-            <p class="cbm" th:text="${#numbers.formatDecimal(req.cbm, 2, 'COMMA', 2, 'POINT')} + ' CBM'"></p>
-            <p class="deadline" th:text="'마감: ' + ${req.deadline}"></p>
-        </div>
-        <div class="actions">
-            <div class="actions-open">
-                <span class="bidder-count" th:text="'입찰 ' + ${req.bidderCount} + '건'"></span>
-                <button class="btn btn-sm btn-details">입찰 현황 보기</button>
-            </div>
-        </div>
-    </th:block>
+<div class="posted-request-list">
+    <div th:if="${myRequestsPage.empty}" class="no-results-message">조회된 요청이 없습니다.</div>
 
-    <th:block th:if="${req.status == 'CLOSED'}">
-        <div class="card-body-centered">
-            <div class="info-group-left">
-                <h3 class="item-name" th:text="${req.itemName}"></h3>
-                <p class="cbm" th:text="${#numbers.formatDecimal(req.cbm, 2, 'COMMA', 2, 'POINT')} + ' CBM'"></p>
-            </div>
+    <div class="request-item-container" th:each="req : ${myRequestsPage.content}">
 
-            <div class="progress-tracker-large">
-                <div class="step" th:classappend="${#lists.contains({'ACCEPTED','CONFIRMED','SHIPPED','COMPLETED','RESOLD'}, req.detailedStatus)} ? 'is-complete' : ''"><div class="dot"></div><div class="label">낙찰</div></div>
-                <div class="step" th:classappend="${#lists.contains({'CONFIRMED','SHIPPED','COMPLETED'}, req.detailedStatus)} ? 'is-complete' : ''"><div class="dot"></div><div class="label">컨테이너 확정</div></div>
-                <div class="step" th:classappend="${#lists.contains({'SHIPPED','COMPLETED'}, req.detailedStatus)} ? 'is-complete' : ''"><div class="dot"></div><div class="label">선적완료</div></div>
-                <div class="step" th:classappend="${#lists.contains({'COMPLETED'}, req.detailedStatus)} ? 'is-complete' : ''"><div class="dot"></div><div class="label">운송완료</div></div>
-            </div>
+        <article class="card request-card" th:attr="data-request-id=${req.requestId}">
+            <th:block th:if="${req.status == 'OPEN'}">
+                <div class="info">
+                    <h3 class="item-name" th:text="${req.itemName}"></h3>
+                    <p class="cbm" th:text="${#numbers.formatDecimal(req.cbm, 2, 'COMMA', 2, 'POINT')} + ' CBM'"></p>
+                    <p class="deadline" th:text="'마감: ' + ${req.deadline}"></p>
+                </div>
+                <div class="actions">
+                    <div class="actions-open">
+                        <span class="bidder-count" th:text="'입찰 ' + ${req.bidderCount} + '건'"></span>
+                        <button class="btn btn-sm btn-details">입찰 현황 보기</button>
+                    </div>
+                </div>
+            </th:block>
 
-            <div class="winner-info">
-                <span class="label">담당 포워더</span>
-                <span class="company-name" th:text="${req.winningBidderCompanyName}"></span>
-            </div>
-        </div>
-    </th:block>
+            <th:block th:if="${req.status == 'CLOSED'}">
+                <div class="card-body-centered">
+                    <div class="info-group-left">
+                        <h3 class="item-name" th:text="${req.itemName}"></h3>
+                        <p class="cbm" th:text="${#numbers.formatDecimal(req.cbm, 2, 'COMMA', 2, 'POINT')} + ' CBM'"></p>
+                    </div>
+                    <div class="progress-tracker-large">
+                        <div class="step" th:classappend="${#lists.contains({'ACCEPTED','CONFIRMED','SHIPPED','COMPLETED','RESOLD'}, req.detailedStatus)} ? 'is-complete' : ''"><div class="dot"></div><div class="label">낙찰</div></div>
+                        <div class="step" th:classappend="${#lists.contains({'CONFIRMED','SHIPPED','COMPLETED'}, req.detailedStatus)} ? 'is-complete' : ''"><div class="dot"></div><div class="label">컨테이너 확정</div></div>
+                        <div class="step" th:classappend="${#lists.contains({'SHIPPED','COMPLETED'}, req.detailedStatus)} ? 'is-complete' : ''"><div class="dot"></div><div class="label">선적완료</div></div>
+                        <div class="step" th:classappend="${#lists.contains({'COMPLETED'}, req.detailedStatus)} ? 'is-complete' : ''"><div class="dot"></div><div class="label">운송완료</div></div>
+                    </div>
+                    <div class="winner-info">
+                        <span class="label">담당 포워더</span>
+                        <span class="company-name" th:text="${req.winningBidderCompanyName}"></span>
+                    </div>
+                </div>
+            </th:block>
+        </article>
 
-</article>
+        <div class="offer-details-container"></div>
                     </div>
                     <div class="pagination-container" th:if="${!myRequestsPage.empty}">
                         <nav th:with="page=${myRequestsPage}">
@@ -82,6 +83,21 @@
                             </ul>
                         </nav>
                     </div>
+             <template id="bidders-list-template">
+                <table class="bids-table">
+                    <thead>
+                        <tr>
+                            <th>입찰자</th>
+                            <th>컨테이너ID</th>
+                            <th>제안 운임</th>
+                            <th>ETD</th>
+                            <th>ETA</th>
+                            <th>관리</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </template>
                 </div>
                 <div id="detail-view" style="display: none;"></div>
             </div>

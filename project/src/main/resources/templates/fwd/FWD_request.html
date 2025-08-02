@@ -22,28 +22,40 @@
                 <h2 class="page-title">견적요청조회</h2>
                 
 			<div class="controls-bar">
-			    <div class="sort-group">
-			        <a th:href="@{/fwd/fwdRequest(sort='createdAt,' + (${currentSortField == 'createdAt'} ? ${reverseSortDirection} : 'desc'), tradeType=${param.tradeType}, transportType=${param.transportType}, departurePort=${param.departurePort}, arrivalPort=${param.arrivalPort}, itemName=${param.itemName}, excludeClosed=${param.excludeClosed})}"
-			           class="btn btn-sort" th:classappend="${currentSortField == 'createdAt'} ? 'is-active'">등록순<span>▼</span></a>
-			        <a th:href="@{/fwd/fwdRequest(sort='deadline,' + (${currentSortField == 'deadline'} ? ${reverseSortDirection} : 'asc'), tradeType=${param.tradeType}, transportType=${param.transportType}, departurePort=${param.departurePort}, arrivalPort=${param.arrivalPort}, itemName=${param.itemName}, excludeClosed=${param.excludeClosed})}"
-			           class="btn btn-sort" th:classappend="${currentSortField == 'deadline'} ? 'is-active'">마감순<span>▼</span></a>
-			        <a th:href="@{/fwd/fwdRequest(sort='cargo.totalCbm,' + (${currentSortField == 'cargo.totalCbm'} ? ${reverseSortDirection} : 'desc'), tradeType=${param.tradeType}, transportType=${param.transportType}, departurePort=${param.departurePort}, arrivalPort=${param.arrivalPort}, itemName=${param.itemName}, excludeClosed=${param.excludeClosed})}"
-			           class="btn btn-sort" th:classappend="${currentSortField == 'cargo.totalCbm'} ? 'is-active'">CBM순<span>▼</span></a>
-			    </div>
+
+			    
+				<div class="sort-group">
+				    <a th:href="@{/fwd/fwdRequest(sort='createdAt,' + (${currentSortField == 'createdAt'} ? ${reverseSortDirection} : 'desc'), tradeType=${param.tradeType}, transportType=${param.transportType}, departurePort=${param.departurePort}, arrivalPort=${param.arrivalPort}, itemName=${param.itemName}, excludeClosed=${param.excludeClosed})}"
+				     class="btn btn-sort" th:classappend="${currentSortField == 'createdAt'} ? 'is-active'">
+				        등록순
+				        <span th:if="${currentSortField == 'createdAt'}" th:text="${currentSortDirection == 'ASC' ? '▲' : '▼'}"></span>
+				        <span th:unless="${currentSortField == 'createdAt'}">▼</span>
+				    </a>
+				    <a th:href="@{/fwd/fwdRequest(sort='deadline,' + (${currentSortField == 'deadline'} ? ${reverseSortDirection} : 'asc'), tradeType=${param.tradeType}, transportType=${param.transportType}, departurePort=${param.departurePort}, arrivalPort=${param.arrivalPort}, itemName=${param.itemName}, excludeClosed=${param.excludeClosed})}" class="btn btn-sort" th:classappend="${currentSortField == 'deadline'} ? 'is-active'">
+				        마감순
+				        <span th:if="${currentSortField == 'deadline'}" th:text="${currentSortDirection == 'ASC' ? '▲' : '▼'}"></span>
+				        <span th:unless="${currentSortField == 'deadline'}">▼</span>
+				    </a>
+				    <a th:href="@{/fwd/fwdRequest(sort='cargo.totalCbm,' + (${currentSortField == 'cargo.totalCbm'} ? ${reverseSortDirection} : 'desc'), tradeType=${param.tradeType}, transportType=${param.transportType}, departurePort=${param.departurePort}, arrivalPort=${param.arrivalPort}, itemName=${param.itemName}, excludeClosed=${param.excludeClosed})}" class="btn btn-sort" th:classappend="${currentSortField == 'cargo.totalCbm'} ? 'is-active'">
+				        CBM순
+				        <span th:if="${currentSortField == 'cargo.totalCbm'}" th:text="${currentSortDirection == 'ASC' ? '▲' : '▼'}"></span>
+				        <span th:unless="${currentSortField == 'cargo.totalCbm'}">▼</span>
+				    </a>
+				</div>			    
 			
 			    <div class="filter-group">
 			        <a th:href="@{/fwd/fwdRequest(tradeType=${tradeType == '수출' ? null : '수출'}, transportType=${param.transportType}, departurePort=${param.departurePort}, arrivalPort=${param.arrivalPort}, itemName=${param.itemName}, excludeClosed=${param.excludeClosed})}"
 			           class="btn" th:classappend="${tradeType == '수출'} ? 'is-active'">수출</a>
 			        <a th:href="@{/fwd/fwdRequest(tradeType=${tradeType == '수입' ? null : '수입'}, transportType=${param.transportType}, departurePort=${param.departurePort}, arrivalPort=${param.arrivalPort}, itemName=${param.itemName}, excludeClosed=${param.excludeClosed})}"
 			           class="btn" th:classappend="${tradeType == '수입'} ? 'is-active'">수입</a>
-			
+					<span class="filter-divider">|</span>
 			        <a th:href="@{/fwd/fwdRequest(transportType=${transportType == '해상' ? null : '해상'}, tradeType=${param.tradeType}, departurePort=${param.departurePort}, arrivalPort=${param.arrivalPort}, itemName=${param.itemName}, excludeClosed=${param.excludeClosed})}"
 			           class="btn" th:classappend="${transportType == '해상'} ? 'is-active'">해상</a>
 			        <a th:href="@{/fwd/fwdRequest(transportType=${transportType == '항공' ? null : '항공'}, tradeType=${param.tradeType}, departurePort=${param.departurePort}, arrivalPort=${param.arrivalPort}, itemName=${param.itemName}, excludeClosed=${param.excludeClosed})}"
 			           class="btn" th:classappend="${transportType == '항공'} ? 'is-active'">항공</a>
-			
+					<span class="filter-divider">|</span>
 			        <button id="btn-open-port-modal" class="btn" th:classappend="${not #strings.isEmpty(departurePort) or not #strings.isEmpty(arrivalPort)} ? 'is-active'">항구별</button>
-			
+					<span class="filter-divider">|</span>
 			        <a th:href="@{/fwd/fwdRequest(excludeClosed=${!excludeClosed}, tradeType=${param.tradeType}, transportType=${param.transportType}, departurePort=${param.departurePort}, arrivalPort=${param.arrivalPort}, itemName=${param.itemName})}"
 			           class="btn" th:classappend="${excludeClosed} ? 'is-active'">마감 제안 제외</a>
 			    </div>
@@ -58,6 +70,34 @@
 			        <button type="submit" class="btn btn-primary">조회</button>
 			    </form>
 			</div>
+			
+				<div class="active-filters-container">
+				    <div class="active-filters-wrapper" th:if="${!#strings.isEmpty(tradeType) or !#strings.isEmpty(transportType) or !#strings.isEmpty(departurePort) or !#strings.isEmpty(arrivalPort) or excludeClosed}">
+				        
+				        <div class="active-filter-pill" th:if="${excludeClosed}">
+				            <span>마감 제안 제외</span>
+				            <a th:href="@{/fwd/fwdRequest(page=0, excludeClosed=false, sort=${param.sort}, tradeType=${param.tradeType}, transportType=${param.transportType}, departurePort=${param.departurePort}, arrivalPort=${param.arrivalPort}, itemName=${param.itemName})}" class="btn-remove-pill">×</a>
+				        </div>
+				        
+				        <div class="active-filter-pill" th:if="${!#strings.isEmpty(tradeType)}">
+				            <span th:text="${tradeType}"></span>
+				            <a th:href="@{/fwd/fwdRequest(page=0, tradeType=null, sort=${param.sort}, transportType=${param.transportType}, departurePort=${param.departurePort}, arrivalPort=${param.arrivalPort}, itemName=${param.itemName}, excludeClosed=${param.excludeClosed})}" class="btn-remove-pill">×</a>
+				        </div>
+				
+				        <div class="active-filter-pill" th:if="${!#strings.isEmpty(transportType)}">
+				            <span th:text="${transportType}"></span>
+				            <a th:href="@{/fwd/fwdRequest(page=0, transportType=null, sort=${param.sort}, tradeType=${param.tradeType}, departurePort=${param.departurePort}, arrivalPort=${param.arrivalPort}, itemName=${param.itemName}, excludeClosed=${param.excludeClosed})}" class="btn-remove-pill">×</a>
+				        </div>
+				
+				        <div class="active-filter-pill" th:if="${!#strings.isEmpty(departurePort) or !#strings.isEmpty(arrivalPort)}">
+				            <span>항구별</span>
+				            <a th:href="@{/fwd/fwdRequest(page=0, departurePort=null, arrivalPort=null, sort=${param.sort}, tradeType=${param.tradeType}, transportType=${param.transportType}, itemName=${param.itemName}, excludeClosed=${param.excludeClosed})}" class="btn-remove-pill">×</a>
+				        </div>
+				    </div>
+				</div>
+			
+			
+			
 				
 				<div class="request-list">
 				    <div th:if="${requestsPage.empty}" class="no-results-message">조회된 요청이 없습니다.</div>
@@ -69,7 +109,8 @@
 				                      data-request-cbm=${req.cbm},
 				                      data-requester-id=${req.requesterId},
 				                      data-has-my-offer=${req.hasMyOffer},
-				                      data-deadline-datetime=${req.deadlineDateTime}">
+				                      data-deadline-datetime=${req.deadlineDateTime},
+				                      data-desired-arrival-date=${req.desiredArrivalDateAsLocalDate}">
 				        
 				        <div class="info">
 				            <span class="id-label" th:text="${req.idLabel}"></span>
@@ -79,7 +120,8 @@
 				                <span class="port departure" th:text="${req.departurePort}"></span>
 				                <span class="arrow">→</span>
 				                <span class="port arrival" th:text="${req.arrivalPort}"></span>
-				                <span class="deadline" th:text="${req.deadline}"></span>
+				                <span class="deadline" th:text="' ' + ' ' + '  마감: ' + ${req.deadline}"></span>
+				                <span class="desired-arrival" th:text="' 도착희망: ' + ${req.desiredArrivalDate}" style="font-weight: 500; color: #007bff; margin-left: 8px;"></span>
 				            </div>
 				        </div>
 				        <div class="meta">
@@ -89,22 +131,22 @@
 				            </div>
 				            <div class="cbm" th:text="${#numbers.formatDecimal(req.cbm, 1, 2)} + ' CBM'"></div>
 				        </div>
-						<div class="actions">
-						    <th:block th:if="${req.status.name() == 'OPEN' and #temporals.createNow().isBefore(req.deadlineDateTime)}">
-						        <button class="btn btn-timer btn-danger" th:attr="data-deadline-datetime=${req.deadlineDateTime}"></button>
-						
-						        <button th:if="${#authentication.name == req.requesterId}" class="btn btn-quote" disabled>재판매중</button>
-						        
-						        <th:block th:unless="${#authentication.name == req.requesterId}">
-						            <button th:if="${req.hasMyOffer}" class="btn btn-quote" disabled>제안완료</button>
-						            <button th:unless="${req.hasMyOffer}" class="btn btn-quote btn-primary">견적제안</button>
-						        </th:block>
-						    </th:block>
-						
-						    <span th:if="${req.status.name() != 'OPEN' or #temporals.createNow().isAfter(req.deadlineDateTime)}" class="status-badge closed">
-						        마감
-						    </span>
-						</div>
+							<div class="actions">
+							    <th:block th:if="${req.status.name() == 'OPEN' and #temporals.createNow().isBefore(req.deadlineDateTime)}">
+							        <button class="btn btn-timer btn-danger" th:attr="data-deadline-datetime=${req.deadlineDateTime}"></button>
+							
+							        <button th:if="${#authentication.name == req.requesterId}" class="btn btn-quote" disabled>재판매중</button>
+							        
+							        <th:block th:unless="${#authentication.name == req.requesterId}">
+							            <button th:if="${req.hasMyOffer}" class="btn btn-quote" disabled>제안완료</button>
+							            <button th:unless="${req.hasMyOffer}" class="btn btn-quote btn-primary">견적제안</button>
+							        </th:block>
+							    </th:block>
+							
+							    <span th:if="${req.status.name() != 'OPEN' or #temporals.createNow().isAfter(req.deadlineDateTime)}" class="status-badge closed">
+							        마감
+							    </span>
+							</div>
 				    </article>
 				</div>
 

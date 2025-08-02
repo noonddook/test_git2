@@ -156,6 +156,7 @@ public class ContainerService {
                             .containerDisplayName(String.format("%s (%s → %s)", container.getContainerId(), container.getDeparturePort(), container.getArrivalPort()))
                             .availableCbm(availableCbm)
                             .etd(container.getEtd())
+                            .eta(container.getEta())
                             .build();
                 })
                 .collect(Collectors.toList());

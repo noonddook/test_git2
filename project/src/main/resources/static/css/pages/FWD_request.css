@@ -445,3 +445,33 @@
 .request-card .btn-timer:hover {
     transform: none;
 }
+
+/* FWD_request.css 파일 맨 아래에 이 코드를 추가하세요 */
+
+.filter-group .filter-divider {
+    color: #e9ecef;     /* 구분선 색상 */
+    font-size: 1.1em;
+    font-weight: 100;
+    align-self: center; /* 버튼들과 수직 중앙 정렬 */
+    margin: 0 4px;      /* 좌우 여백을 살짝 줍니다 */
+}
+
+/* FWD_request.css 파일 맨 아래에 이 코드를 추가하세요 */
+
+/* 비활성화된 라디오 버튼의 라벨 스타일 */
+.port-options label:has(input[type="radio"]:disabled) {
+    cursor: not-allowed;
+    color: #ced4da; /* 글자색을 흐리게 */
+}
+
+/* 비활성화된 라디오 버튼의 체크마크 스타일 */
+.port-options input[type="radio"]:disabled ~ .checkmark {
+    background-color: #f1f3f5; /* 배경색을 약간 회색으로 */
+    border-color: #e9ecef;   /* 테두리도 흐리게 */
+    cursor: not-allowed;
+}
+
+/* 비활성화된 라디오 버튼에 마우스를 올려도 효과 없음 */
+.port-options label:hover input[type="radio"]:disabled ~ .checkmark {
+    border-color: #e9ecef;
+}

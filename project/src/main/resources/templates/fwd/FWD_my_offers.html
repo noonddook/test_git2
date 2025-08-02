@@ -21,14 +21,26 @@
             <section class="content">
                 <h2 class="page-title">나의제안조회</h2>
 				<div class="controls-bar">
-				    <div class="sort-group">
-				        <a th:href="@{/fwd/my-offers(sort='createdAt,' + ${reverseSortDirection}, status=${status}, keyword=${keyword})}"
-				           class="btn btn-sort" th:classappend="${currentSortField == 'createdAt'} ? 'is-active'">최신순<span>▼</span></a>
-				        <a th:href="@{/fwd/my-offers(sort='container.etd,' + ${reverseSortDirection}, status=${status}, keyword=${keyword})}"
-				           class="btn btn-sort" th:classappend="${currentSortField == 'container.etd'} ? 'is-active'">출발일순<span>▼</span></a>
-				        <a th:href="@{/fwd/my-offers(sort='request.cargo.totalCbm,' + ${reverseSortDirection}, status=${status}, keyword=${keyword})}"
-				           class="btn btn-sort" th:classappend="${currentSortField == 'request.cargo.totalCbm'} ? 'is-active'">CBM순<span>▼</span></a>
-				    </div>
+					<div class="sort-group">
+					    <a th:href="@{/fwd/my-offers(sort='createdAt,' + ${reverseSortDirection}, status=${status}, keyword=${keyword})}" class="btn btn-sort" th:classappend="${currentSortField == 'createdAt'} ? 'is-active'">
+					        최신순
+					        <span th:if="${currentSortField == 'createdAt'}" th:text="${currentSortDirection == 'ASC' ? '▲' : '▼'}"></span>
+					        <span th:unless="${currentSortField == 'createdAt'}">▼</span>
+					    </a>
+					    <a th:href="@{/fwd/my-offers(sort='container.etd,' + ${reverseSortDirection}, status=${status}, keyword=${keyword})}" class="btn btn-sort" th:classappend="${currentSortField == 'container.etd'} ? 'is-active'">
+					        출발일순
+					        <span th:if="${currentSortField == 'container.etd'}" th:text="${currentSortDirection == 'ASC' ? '▲' : '▼'}"></span>
+					        <span th:unless="${currentSortField == 'container.etd'}">▼</span>
+					    </a>
+					    <a th:href="@{/fwd/my-offers(sort='request.cargo.totalCbm,' + ${reverseSortDirection}, status=${status}, keyword=${keyword})}" class="btn btn-sort" th:classappend="${currentSortField == 'request.cargo.totalCbm'} ? 'is-active'">
+					        CBM순
+					        <span th:if="${currentSortField == 'request.cargo.totalCbm'}" th:text="${currentSortDirection == 'ASC' ? '▲' : '▼'}"></span>
+					        <span th:unless="${currentSortField == 'request.cargo.totalCbm'}">▼</span>
+					    </a>
+					</div>
+				    
+
+
 				    <div class="filter-group">
 				        <a th:href="@{/fwd/my-offers(status=${status == 'ACCEPTED' ? null : 'ACCEPTED'}, keyword=${keyword}, sort=${param.sort})}"
 				           class="btn" th:classappend="${status == 'ACCEPTED'} ? 'is-active'">수락</a>

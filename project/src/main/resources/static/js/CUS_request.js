@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 departurePort: document.getElementById('departurePort').value,
                 arrivalPort: document.getElementById('arrivalPort').value,
                 deadline: document.getElementById('deadline').value,
+				desiredArrivalDate: document.getElementById('desiredArrivalDate').value,
                 tradeType: document.getElementById('tradeType').value,
                 transportType: document.getElementById('transportType').value,
             };

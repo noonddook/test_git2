@@ -16,4 +16,5 @@ public class AvailableContainerDto {
     private String containerDisplayName; // 예: "SEAU1111111 (부산 -> 상해)"
     private Double availableCbm;
     private LocalDate etd; 
+    private LocalDate eta;
 }

@@ -15,6 +15,7 @@ public class ContainerStatusDto {
     private String size;
     private Double totalCapacity; // 총 용량
     private String sailingDate;   // 출항일
+    private String arrivalDate;
     private String route;         // 경로
 
     // 계산된 CBM 정보
@@ -51,6 +52,7 @@ public class ContainerStatusDto {
                 .size(entity.getSize())
                 .totalCapacity(entity.getCapacityCbm())
                 .sailingDate(entity.getEtd().format(DateTimeFormatter.ofPattern("yyyy. M. d.")))
+                .arrivalDate(entity.getEta().format(DateTimeFormatter.ofPattern("yyyy. M. d.")))
                 .route(entity.getDeparturePort() + " → " + entity.getArrivalPort())
                 .build();
     }

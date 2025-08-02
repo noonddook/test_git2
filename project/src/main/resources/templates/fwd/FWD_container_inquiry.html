@@ -20,25 +20,34 @@
             <section class="content">
                 <h2 class="page-title">컨테이너조회</h2>
 
-                <div class="controls-bar">
-                    <div class="sort-group">
-                        <a th:href="@{/fwd/container-inquiry(sort='containerId,' + (${currentSortField == 'containerId'} ? ${reverseSortDirection} : 'asc'))}"
-                            class="btn btn-sort"
-                            th:classappend="${currentSortField == 'containerId'} ? 'is-active'">등록순<span>▼</span></a>
-                        <a th:href="@{/fwd/container-inquiry(sort='etd,' + (${currentSortField == 'etd'} ? ${reverseSortDirection} : 'asc'))}"
-                            class="btn btn-sort"
-                            th:classappend="${currentSortField == 'etd'} ? 'is-active'">출항일순<span>▼</span></a>
-                        <a th:href="@{/fwd/container-inquiry(sort='eta,' + (${currentSortField == 'eta'} ? ${reverseSortDirection} : 'asc'))}"
-                            class="btn btn-sort"
-                            th:classappend="${currentSortField == 'eta'} ? 'is-active'">도착일순<span>▼</span></a>
-                        <a th:href="@{/fwd/container-inquiry(sort='availableCbm,' + (${currentSortField == 'availableCbm'} ? ${reverseSortDirection} : 'desc'))}"
-                            class="btn btn-sort"
-                            th:classappend="${currentSortField == 'availableCbm'} ? 'is-active'">입찰가능물량순<span>▼</span></a>
-                        <a th:href="@{/fwd/container-inquiry(sort='departurePort,' + (${currentSortField == 'departurePort'} ? ${reverseSortDirection} : 'asc'))}"
-                            class="btn btn-sort"
-                            th:classappend="${currentSortField == 'departurePort'} ? 'is-active'">경로순<span>▼</span></a>
-                    </div>
-                </div>
+					<div class="sort-group">
+					    <a th:href="@{/fwd/container-inquiry(sort='containerId,' + (${currentSortField == 'containerId'} ? ${reverseSortDirection} : 'asc'))}" class="btn btn-sort" th:classappend="${currentSortField == 'containerId'} ? 'is-active'">
+					        등록순
+					        <span th:if="${currentSortField == 'containerId'}" th:text="${currentSortDirection == 'ASC' ? '▲' : '▼'}"></span>
+					        <span th:unless="${currentSortField == 'containerId'}">▼</span>
+					    </a>
+					    <a th:href="@{/fwd/container-inquiry(sort='etd,' + (${currentSortField == 'etd'} ? ${reverseSortDirection} : 'asc'))}" class="btn btn-sort" th:classappend="${currentSortField == 'etd'} ? 'is-active'">
+					        출항일순
+					        <span th:if="${currentSortField == 'etd'}" th:text="${currentSortDirection == 'ASC' ? '▲' : '▼'}"></span>
+					        <span th:unless="${currentSortField == 'etd'}">▼</span>
+					    </a>
+					    <a th:href="@{/fwd/container-inquiry(sort='eta,' + (${currentSortField == 'eta'} ? ${reverseSortDirection} : 'asc'))}" class="btn btn-sort" th:classappend="${currentSortField == 'eta'} ? 'is-active'">
+					        도착일순
+					        <span th:if="${currentSortField == 'eta'}" th:text="${currentSortDirection == 'ASC' ? '▲' : '▼'}"></span>
+					        <span th:unless="${currentSortField == 'eta'}">▼</span>
+					    </a>
+					    <a th:href="@{/fwd/container-inquiry(sort='availableCbm,' + (${currentSortField == 'availableCbm'} ? ${reverseSortDirection} : 'desc'))}" class="btn btn-sort" th:classappend="${currentSortField == 'availableCbm'} ? 'is-active'">
+					        입찰가능물량순
+					        <span th:if="${currentSortField == 'availableCbm'}" th:text="${currentSortDirection == 'ASC' ? '▲' : '▼'}"></span>
+					        <span th:unless="${currentSortField == 'availableCbm'}">▼</span>
+					    </a>
+					    <a th:href="@{/fwd/container-inquiry(sort='departurePort,' + (${currentSortField == 'departurePort'} ? ${reverseSortDirection} : 'asc'))}" class="btn btn-sort" th:classappend="${currentSortField == 'departurePort'} ? 'is-active'">
+					        경로순
+					        <span th:if="${currentSortField == 'departurePort'}" th:text="${currentSortDirection == 'ASC' ? '▲' : '▼'}"></span>
+					        <span th:unless="${currentSortField == 'departurePort'}">▼</span>
+					    </a>
+					</div> 
+                
 
                 <!-- Thymeleaf를 이용한 동적 렌더링 영역 -->
                 <div class="container-list">
@@ -63,9 +72,13 @@
                                     th:text="${#numbers.formatDecimal(c.totalCapacity, 1, 2)} + ' CBM'"></span>
                             </div>
                             <div class="info-group">
-                                <span class="label">출항일:</span>
+                                <span class="label">ETD:</span>
                                 <span class="value" th:text="${c.sailingDate}"></span>
                             </div>
+						    <div class="info-group">
+						        <span class="label">ETA:</span>
+						        <span class="value" th:text="${c.arrivalDate}"></span>
+						    </div>                            
                             <div class="info-group route">
                                 <span class="label">경로:</span>
                                 <span class="value" th:text="${c.route}"></span>

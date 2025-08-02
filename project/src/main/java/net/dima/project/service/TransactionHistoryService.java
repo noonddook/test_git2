@@ -106,25 +106,37 @@ public class TransactionHistoryService {
                 .collect(Collectors.toList());
     }
 
-    public Page<TransactionHistoryDto> getShipperHistory(String currentUserId, Pageable pageable) {
+ // [✅ getShipperHistory 메서드 전체를 이 코드로 교체해주세요]
+    public Page<TransactionHistoryDto> getShipperHistory(String currentUserId, LocalDate startDate, LocalDate endDate, String keyword, Pageable pageable) {
         UserEntity shipper = userRepository.findByUserId(currentUserId);
         List<RequestEntity> closedRequests = requestRepository.findByRequesterAndSourceOfferIsNullAndStatus(shipper, RequestStatus.CLOSED);
 
         List<TransactionHistoryDto> historyList = closedRequests.stream()
                 .map(req -> {
                     Optional<OfferEntity> finalOfferOpt = findFinalOffer(req);
-                    return finalOfferOpt.map(finalOffer -> TransactionHistoryDto.builder()
-                            .transactionDate(finalOffer.getCreatedAt())
-                            .type("요청")
-                            .itemName(req.getCargo().getItemName())
-                            .partnerName(finalOffer.getForwarder().getCompanyName())
-                            .price(finalOffer.getPrice())
-                            .currency(finalOffer.getCurrency())
-                            .status(finalOffer.getContainer().getStatus().name())
-                            .build()
-                    ).orElse(null);
+                    if (finalOfferOpt.isPresent() && finalOfferOpt.get().getContainer().getStatus() == ContainerStatus.SETTLED) {
+                        OfferEntity finalOffer = finalOfferOpt.get();
+                        return TransactionHistoryDto.builder()
+                                .transactionDate(finalOffer.getCreatedAt())
+                                .type("요청")
+                                .itemName(req.getCargo().getItemName())
+                                .departurePort(req.getDeparturePort())
+                                .arrivalPort(req.getArrivalPort())
+                                .partnerName(finalOffer.getForwarder().getCompanyName())
+                                .price(finalOffer.getPrice())
+                                .currency(finalOffer.getCurrency())
+                                .status("정산완료")
+                                .build();
+                    }
+                    return null;
                 })
                 .filter(dto -> dto != null)
+                // [✅ 아래 필터링 로직 추가]
+                .filter(dto -> (startDate == null || !dto.getTransactionDate().toLocalDate().isBefore(startDate)))
+                .filter(dto -> (endDate == null || !dto.getTransactionDate().toLocalDate().isAfter(endDate)))
+                .filter(dto -> (keyword == null || keyword.isBlank() ||
+                        (dto.getItemName() != null && dto.getItemName().toLowerCase().contains(keyword.toLowerCase())) ||
+                        (dto.getPartnerName() != null && dto.getPartnerName().toLowerCase().contains(keyword.toLowerCase()))))
                 .sorted(Comparator.comparing(TransactionHistoryDto::getTransactionDate).reversed())
                 .collect(Collectors.toList());
 
@@ -135,20 +147,31 @@ public class TransactionHistoryService {
         return new PageImpl<>(pageContent, pageable, historyList.size());
     }
 
+ // [✅ findFinalOffer 메서드 전체를 이 코드로 교체해주세요]
     private Optional<OfferEntity> findFinalOffer(RequestEntity request) {
+        // 1. 현재 요청의 낙찰자를 찾음 (거절/보류 제외)
         Optional<OfferEntity> winningOfferOpt = offerRepository.findAllByRequest(request).stream()
                 .filter(o -> o.getStatus() != OfferStatus.PENDING && o.getStatus() != OfferStatus.REJECTED)
                 .findFirst();
 
         if (winningOfferOpt.isPresent()) {
             OfferEntity winningOffer = winningOfferOpt.get();
+            // 2. 만약 낙찰된 제안이 '재판매' 상태라면, 다음 거래를 추적
             if (winningOffer.getStatus() == OfferStatus.RESOLD) {
-                return requestRepository.findBySourceOffer(winningOffer)
-                        .flatMap(this::findFinalOffer);
+                
+                // ★★★ 핵심 수정 ★★★
+                // 중복된 재판매 요청이 있더라도, 가장 최신 1건만 가져옵니다.
+                List<RequestEntity> nextRequests = requestRepository.findBySourceOfferOrderedByCreatedAtDesc(winningOffer);
+                
+                // 가져온 요청이 있다면, 그 중 첫 번째(가장 최신) 요청으로 재귀 호출을 계속합니다.
+                if (!nextRequests.isEmpty()) {
+                    return findFinalOffer(nextRequests.get(0));
+                }
             } else {
+                // 3. '재판매'가 아니면, 이 제안이 최종 운송자이므로 반환
                 return winningOfferOpt;
             }
         }
-        return Optional.empty();
+        return Optional.empty(); // 낙찰자가 없는 경우
     }
 }

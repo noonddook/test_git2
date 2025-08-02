@@ -1,6 +1,8 @@
 package net.dima.project.dto;
 
 import lombok.Data;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -15,6 +17,7 @@ public class NewRequestDto {
     private String departurePort;
     private String arrivalPort;
     private LocalDateTime deadline;
+    private LocalDate desiredArrivalDate;
     private String tradeType;
     private String transportType;
 }

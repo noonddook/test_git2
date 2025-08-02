@@ -12,7 +12,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeOpenOfferForm = () => {
         const openForm = document.querySelector('.offer-form-expand');
         if (openForm) {
-            // 폼의 이전 형제 요소인 카드를 찾습니다.
             const card = openForm.previousElementSibling;
             if (card?.classList.contains('is-expanded')) {
                 card.classList.remove('is-expanded');
@@ -24,21 +23,18 @@ document.addEventListener('DOMContentLoaded', () => {
     requestList.addEventListener('click', async (e) => {
         const quoteButton = e.target.closest('.btn-quote');
         
-        if (!quoteButton) {
+        if (!quoteButton || quoteButton.disabled) {
             return;
         }
 
         const card = quoteButton.closest('.request-card');
         if (!card) return;
         
-        const requesterId = card.dataset.requesterId;
-        const isDisabled = quoteButton.disabled;
-
-        if (isDisabled || requesterId === currentUserId) {
-            return; 
+        const hasMyOffer = card.dataset.hasMyOffer === 'true';
+        if (hasMyOffer) {
+            return;
         }
 
-        // ★★★ 핵심 수정: 'itemContainer' 대신 'card'를 직접 사용합니다 ★★★
         if (card.classList.contains('is-expanded')) {
             closeOpenOfferForm();
             return;
@@ -48,10 +44,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const requestId = card.dataset.requestId;
         const requestCbm = parseFloat(card.dataset.requestCbm);
-        const requestDeadlineString = card.dataset.deadlineDatetime.substring(0, 10);
+        const desiredArrivalDateString = card.dataset.desiredArrivalDate;
 
         try {
-            // ★★★ 핵심 수정: 'card'에 직접 클래스를 추가합니다 ★★★
             card.classList.add('is-expanded');
             
             const response = await fetch(`/api/fwd/available-containers?requestId=${requestId}`);
@@ -77,7 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     option.value = c.containerId;
                     option.textContent = c.containerDisplayName;
                     option.dataset.availableCbm = c.availableCbm;
-                    option.dataset.etd = c.etd;
+                    option.dataset.eta = c.eta;
                     containerSelect.appendChild(option);
                 });
             } else {
@@ -94,18 +89,35 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 const availableCbm = parseFloat(selectedOption.dataset.availableCbm);
-                const containerEtdString = selectedOption.dataset.etd;
+                const containerEtaString = selectedOption.dataset.eta;
                 capacityInput.value = `${availableCbm.toFixed(2)} CBM`;
 
                 const isCbmOk = availableCbm >= requestCbm;
-                const isDateOk = containerEtdString <= requestDeadlineString;
+                
+                // ★★★ 핵심 수정: 날짜 차이를 계산하는 로직 ★★★
+                let isDateOk = false;
+                let reason = "도착 희망일이 지정되지 않은 요청입니다.";
+
+                if (desiredArrivalDateString && desiredArrivalDateString !== 'null') {
+                    const desiredArrival = new Date(desiredArrivalDateString);
+                    const containerEta = new Date(containerEtaString);
+                    
+                    desiredArrival.setHours(0, 0, 0, 0);
+                    containerEta.setHours(0, 0, 0, 0);
+
+                    const timeDiff = containerEta.getTime() - desiredArrival.getTime();
+                    const dayDiff = timeDiff / (1000 * 3600 * 24);
+
+                    isDateOk = dayDiff <= 3;
+                    reason = !isDateOk ? '도착 희망일보다 3일 이상 늦습니다.' : '';
+                }
 
                 if (isCbmOk && isDateOk) {
                     statusText.innerHTML = `<strong class="possible">견적제안 가능</strong>합니다.`;
                     submitBtn.disabled = false;
                 } else {
-                    let reason = !isCbmOk ? '잔여 용량이 부족합니다.' : '출항일이 요청 마감일보다 늦습니다.';
-                    statusText.innerHTML = `<strong class="impossible">제안 불가</strong> (${reason})`;
+                    let finalReason = !isCbmOk ? '잔여 용량이 부족합니다.' : reason;
+                    statusText.innerHTML = `<strong class="impossible">제안 불가</strong> (${finalReason})`;
                     submitBtn.disabled = true;
                 }
             });
@@ -143,7 +155,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Fetch error:', error);
             alert(error.message);
-            // 에러 발생 시 펼침 상태 제거
             if(card) card.classList.remove('is-expanded');
         }
     });

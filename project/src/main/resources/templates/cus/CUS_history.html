@@ -22,8 +22,18 @@
         <section class="content">
             <h2 class="page-title">요청이력조회</h2>
 
-            <div class="controls-bar">
-                </div>
+			<div class="controls-bar">
+			    <div class="control-group date-group">
+			        <input type="date" id="start-date" class="form-input date-input" th:value="${startDate}">
+			        <span>~</span>
+			        <input type="date" id="end-date" class="form-input date-input" th:value="${endDate}">
+			    </div>
+			    <form class="search-group" id="search-form">
+			        <input type="text" id="keyword-input" class="form-input" placeholder="품명 또는 담당포워더 검색" th:value="${keyword}">
+			        <button type="submit" class="btn btn-primary">조회</button>
+			        <button type="button" id="btn-calculate-summary" class="btn btn-dark">금액 계산</button>
+			    </form>
+			</div>
 
             <div class="table-container">
                 <table class="data-table transaction-table">
@@ -71,5 +81,22 @@
         </section>
     </main>
 </div>
+
+
+<div class="modal-wrapper" id="summary-modal" style="display: none;">
+    <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-header">
+            <h3 id="summary-modal-title">거래 합계</h3>
+            <button class="btn-close">×</button>
+        </div>
+        <div class="modal-body" id="summary-modal-body">
+            </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary btn-cancel">닫기</button>
+        </div>
+    </div>
+</div>
+
+<script th:src="@{/js/CUS_history.js}"></script>
 </body>
 </html>

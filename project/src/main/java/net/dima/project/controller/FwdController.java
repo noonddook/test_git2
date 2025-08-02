@@ -68,6 +68,7 @@ public class FwdController {
         String currentSortField = pageable.getSort().iterator().next().getProperty();
         String currentSortDirection = pageable.getSort().iterator().next().getDirection().name();
         model.addAttribute("currentSortField", currentSortField);
+        model.addAttribute("currentSortDirection", currentSortDirection); // [✅ 이 줄 추가]
         model.addAttribute("reverseSortDirection", currentSortDirection.equals("ASC") ? "desc" : "asc");
 
         return "fwd/FWD_request";}
@@ -113,6 +114,7 @@ public class FwdController {
         String currentSortField = pageable.getSort().isSorted() ? pageable.getSort().iterator().next().getProperty() : "createdAt";
         String currentSortDirection = pageable.getSort().isSorted() ? pageable.getSort().iterator().next().getDirection().name() : "DESC";
         model.addAttribute("currentSortField", currentSortField);
+        model.addAttribute("currentSortDirection", currentSortDirection); // [✅ 이 줄 추가]
         model.addAttribute("reverseSortDirection", currentSortDirection.equalsIgnoreCase("ASC") ? "desc" : "asc");
         
         return "fwd/FWD_my_offers";
@@ -137,6 +139,7 @@ public class FwdController {
         String currentSortField = pageable.getSort().iterator().next().getProperty();
         String currentSortDirection = pageable.getSort().iterator().next().getDirection().name();
         model.addAttribute("currentSortField", currentSortField);
+        model.addAttribute("currentSortDirection", currentSortDirection); // [✅ 이 줄 추가]
         model.addAttribute("reverseSortDirection", currentSortDirection.equalsIgnoreCase("ASC") ? "desc" : "asc");
 
         return "fwd/FWD_container_inquiry";

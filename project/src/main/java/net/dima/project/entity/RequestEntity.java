@@ -9,6 +9,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import jakarta.persistence.EnumType;     // import 추가
 import jakarta.persistence.Enumerated; // import 추가
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -39,6 +40,9 @@ public class RequestEntity {
 
     @Column(nullable = false)
     private LocalDateTime deadline;
+    
+    @Column(name = "desired_arrival_date") // [✅ 이 필드를 추가해주세요]
+    private LocalDate desiredArrivalDate;
 
     @Column(nullable = false)
     private String tradeType;

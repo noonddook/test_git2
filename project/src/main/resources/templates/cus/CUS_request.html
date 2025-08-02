@@ -7,7 +7,7 @@
     <link rel="stylesheet" th:href="@{/css/layout.css}">
     <link rel="stylesheet" th:href="@{/css/components.css}">
     <link rel="stylesheet" th:href="@{/css/pages/FWD_my_posted_requests.css}">
-    \<link rel="stylesheet" th:href="@{/css/pages/CUS_request.css}">
+    <link rel="stylesheet" th:href="@{/css/pages/CUS_request.css}">
 </head>
 <body>
 <div class="container">
@@ -18,21 +18,25 @@
             <div id="view-container">
                 <div id="list-view">
                     <h2 class="page-title">나의요청 관리</h2>
-                    <div class="controls-bar">
-                        <div class="filter-group">
-					        <a th:href="@{/cus/cusRequest(status=null)}" class="btn" th:classappend="${status == null} ? 'is-active'">전체</a>
-					        <a th:href="@{/cus/cusRequest(status='OPEN')}" class="btn" th:classappend="${status == 'OPEN'} ? 'is-active'">제안받는중</a>
-					        <a th:href="@{/cus/cusRequest(status='ACCEPTED')}" class="btn" th:classappend="${status == 'ACCEPTED'} ? 'is-active'">낙찰</a>
-					        <a th:href="@{/cus/cusRequest(status='CONFIRMED')}" class="btn" th:classappend="${status == 'CONFIRMED'} ? 'is-active'">확정</a>
-					        <a th:href="@{/cus/cusRequest(status='SHIPPED')}" class="btn" th:classappend="${status == 'SHIPPED'} ? 'is-active'">선적</a>
-					        <a th:href="@{/cus/cusRequest(status='COMPLETED')}" class="btn" th:classappend="${status == 'COMPLETED'} ? 'is-active'">도착</a>
-                        </div>
-                    </div>
+					<div class="controls-bar">
+					    <div class="filter-group">
+					        <a th:href="@{/cus/cusRequest(status=null, excludeClosed=${excludeClosed})}" class="btn" th:classappend="${status == null} ? 'is-active'">전체</a>
+					        <a th:href="@{/cus/cusRequest(status='OPEN', excludeClosed=${excludeClosed})}" class="btn" th:classappend="${status == 'OPEN'} ? 'is-active'">제안받는중</a>
+					        <a th:href="@{/cus/cusRequest(status='ACCEPTED', excludeClosed=${excludeClosed})}" class="btn" th:classappend="${status == 'ACCEPTED'} ? 'is-active'">낙찰</a>
+					        <a th:href="@{/cus/cusRequest(status='CONFIRMED', excludeClosed=${excludeClosed})}" class="btn" th:classappend="${status == 'CONFIRMED'} ? 'is-active'">확정</a>
+					        <a th:href="@{/cus/cusRequest(status='SHIPPED', excludeClosed=${excludeClosed})}" class="btn" th:classappend="${status == 'SHIPPED'} ? 'is-active'">선적</a>
+					        <a th:href="@{/cus/cusRequest(status='COMPLETED', excludeClosed=${excludeClosed})}" class="btn" th:classappend="${status == 'COMPLETED'} ? 'is-active'">도착</a>
+					        
+					        <a th:href="@{/cus/cusRequest(status=${param.status}, excludeClosed=${!excludeClosed})}"
+					           class="btn" th:classappend="${excludeClosed} ? 'is-active'">마감 제외 조회</a>
+					    </div>
+					</div>
                     <div class="posted-request-list">
                         <div th:if="${requestPage.empty}" class="no-results-message">등록된 요청이 없습니다. 우측 하단 버튼으로 새 요청을 등록해보세요.</div>
 
                         <div class="request-item-container" th:each="req : ${requestPage.content}">
-                            <article class="card request-card" th:attr="data-request-id=${req.requestId}">
+                            <article class="card request-card" th:attr="data-request-id=${req.requestId}" 
+                            th:classappend="${req.status == 'CLOSED' and (req.winningBidderCompanyName == null or #strings.isEmpty(req.winningBidderCompanyName))} ? 'is-closed' : ''">
                                 <div class="info">
                                     <h3 class="item-name" th:text="${req.itemName}"></h3>
                                     <p class="cbm" th:text="${#numbers.formatDecimal(req.cbm, 2, 'COMMA', 2, 'POINT')} + ' CBM'"></p>
@@ -43,20 +47,24 @@
                                         <span class="bidder-count" th:text="'제안 ' + ${req.bidderCount} + '건 도착'"></span>
                                         <button class="btn btn-sm btn-details">제안 보기</button>
                                     </div>
-                                    <div th:if="${req.status == 'CLOSED'}" class="actions-closed">
-                                        <div class="progress-tracker">
-                                            <div class="step" th:classappend="${#lists.contains({'ACCEPTED','CONFIRMED','SHIPPED','COMPLETED','RESOLD'}, req.detailedStatus)} ? 'is-complete' : ''"><div class="dot"></div><div class="label">낙찰</div></div>
-                                            <div class="step" th:classappend="${#lists.contains({'CONFIRMED','SHIPPED','COMPLETED'}, req.detailedStatus)} ? 'is-complete' : ''"><div class="dot"></div><div class="label">컨테이너 확정</div></div>
-                                            <div class="step" th:classappend="${#lists.contains({'SHIPPED','COMPLETED'}, req.detailedStatus)} ? 'is-complete' : ''"><div class="dot"></div><div class="label">선적완료</div></div>
-                                            <div class="step" th:classappend="${#lists.contains({'COMPLETED'}, req.detailedStatus)} ? 'is-complete' : ''"><div class="dot"></div><div class="label">운송완료</div></div>
-                                        </div>
-                                        <div class="winner-info">
-                                            <span class="label">담당 포워더 : </span>
-                                            <span class="company-name" th:text="${req.winningBidderCompanyName}"></span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </article>
+							        <div th:if="${req.status == 'CLOSED'}" class="actions-closed">
+							            <th:block th:if="${req.winningBidderCompanyName != null and !#strings.isEmpty(req.winningBidderCompanyName)}">
+							                <div class="progress-tracker">
+							                    <div class="step" th:classappend="${#lists.contains({'ACCEPTED','CONFIRMED','SHIPPED','COMPLETED','RESOLD'}, req.detailedStatus)} ? 'is-complete' : ''"><div class="dot"></div><div class="label">낙찰</div></div>
+							                    <div class="step" th:classappend="${#lists.contains({'CONFIRMED','SHIPPED','COMPLETED'}, req.detailedStatus)} ? 'is-complete' : ''"><div class="dot"></div><div class="label">컨테이너 확정</div></div>
+							                    <div class="step" th:classappend="${#lists.contains({'SHIPPED','COMPLETED'}, req.detailedStatus)} ? 'is-complete' : ''"><div class="dot"></div><div class="label">선적완료</div></div>
+							                    <div class="step" th:classappend="${#lists.contains({'COMPLETED'}, req.detailedStatus)} ? 'is-complete' : ''"><div class="dot"></div><div class="label">운송완료</div></div>
+							                </div>
+							                <div class="winner-info">
+							                    <span class="label">담당 포워더 : </span>
+							                    <span class="company-name" th:text="${req.winningBidderCompanyName}"></span>
+							                </div>
+							            </th:block>
+							            <span th:unless="${req.winningBidderCompanyName != null and !#strings.isEmpty(req.winningBidderCompanyName)}"
+							                  class="status-badge closed">마감</span>
+							        </div>
+							    </div>
+							</article>
                             <div class="offer-details-container"></div>
                         </div>
 
@@ -117,6 +125,7 @@
                     <input type="text" id="departurePort" class="form-input" placeholder="출발항 (예: 부산)" required>
                     <input type="text" id="arrivalPort" class="form-input" placeholder="도착항 (예: 도쿄)" required>
                     <input type="datetime-local" id="deadline" class="form-input" required>
+                    <input type="date" id="desiredArrivalDate" class="form-input" required> 
                     <select id="tradeType" class="form-input"><option value="수출">수출</option><option value="수입">수입</option></select>
                     <select id="transportType" class="form-input"><option value="해상">해상</option><option value="항공">항공</option></select>
                 </div>

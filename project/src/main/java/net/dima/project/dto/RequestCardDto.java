@@ -5,6 +5,7 @@ import lombok.Data;
 import net.dima.project.entity.RequestEntity;
 import net.dima.project.entity.RequestStatus; // [✅ 추가]
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -18,6 +19,8 @@ public class RequestCardDto {
     private String departurePort;
     private String arrivalPort;
     private String deadline;
+    private String desiredArrivalDate;
+    private LocalDate desiredArrivalDateAsLocalDate; 
     private String tradeType;
     private String transportType;
     private Double cbm;
@@ -39,6 +42,10 @@ public class RequestCardDto {
                 .departurePort(entity.getDeparturePort())
                 .arrivalPort(entity.getArrivalPort())
                 .deadline(entity.getDeadline().format(DateTimeFormatter.ofPattern("yyyy.MM.dd")))
+                .desiredArrivalDate(entity.getDesiredArrivalDate() != null 
+                ? entity.getDesiredArrivalDate().format(DateTimeFormatter.ofPattern("yyyy.MM.dd")) 
+                : "미지정")
+                .desiredArrivalDateAsLocalDate(entity.getDesiredArrivalDate())
                 .tradeType(entity.getTradeType())
                 .transportType(entity.getTransportType())
                 .cbm(entity.getCargo().getTotalCbm()) // cargo 엔티티에서 totalCbm 가져오기
@@ -53,4 +60,6 @@ public class RequestCardDto {
     public static RequestCardDto fromEntity(RequestEntity entity) {
         return fromEntity(entity, false); // 기본값은 false
     }
+    
+    
 }

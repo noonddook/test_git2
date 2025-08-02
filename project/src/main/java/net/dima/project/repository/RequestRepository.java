@@ -9,6 +9,7 @@ import org.springframework.data.domain.Sort; // [✅ import 추가]
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor; 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 // @Param은 더 이상 필요 없으므로 import 문을 지워도 됩니다.
 import org.springframework.stereotype.Repository;
 import org.springframework.data.domain.Page;    // [✅ import 추가]
@@ -60,5 +61,12 @@ public interface RequestRepository extends JpaRepository<RequestEntity, Long>, J
  // [✅ 이 메서드를 추가해주세요]
     List<RequestEntity> findBySourceOfferIn(List<OfferEntity> sourceOffers);
 
+    /**
+     * 재판매의 근원이 되는 제안(Offer)으로 요청(Request)을 찾습니다.
+     * 중복 데이터가 있을 경우를 대비해 최신순으로 정렬된 리스트를 반환합니다.
+     */
+    
+    @Query("SELECT r FROM RequestEntity r WHERE r.sourceOffer = :sourceOffer ORDER BY r.createdAt DESC")
+    List<RequestEntity> findBySourceOfferOrderedByCreatedAtDesc(@Param("sourceOffer") OfferEntity sourceOffer);
 
 }

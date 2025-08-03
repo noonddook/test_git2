@@ -138,7 +138,7 @@
 							    <th:block th:if="${req.status.name() == 'OPEN' and #temporals.createNow().isBefore(req.deadlineDateTime)}">
 							        <button class="btn btn-timer btn-danger" th:attr="data-deadline-datetime=${req.deadlineDateTime}"></button>
 							
-							        <button th:if="${#authentication.name == req.requesterId}" class="btn btn-quote" disabled>재판매중</button>
+							        <button th:if="${#authentication.name == req.requesterId}" class="btn btn-status-display" disabled>재판매중</button>
 							        
 							        <th:block th:unless="${#authentication.name == req.requesterId}">
 							            <button th:if="${req.hasMyOffer}" class="btn btn-quote" disabled>제안완료</button>

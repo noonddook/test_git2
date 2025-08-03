@@ -138,13 +138,14 @@
     gap: 12px;
 }
 
+/* [수정] .btn-status-display 클래스를 추가하여 크기 스타일을 공유하도록 변경 */
 .request-card .btn-timer,
-.request-card .btn-quote {
+.request-card .btn-quote,
+.request-card .btn-status-display {
     padding: 12px 20px;
     font-size: 15px;
     font-weight: 700;
     border-radius: 8px;
-    /* 원하는 값으로 조절 가능 (예: 4px, 10px 등) */
 }
 
 

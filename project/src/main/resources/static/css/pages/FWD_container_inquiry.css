@@ -419,7 +419,7 @@
     background-color: #fd7e14; /* 입찰중: 주황 계열 */
 }
 .cbm-item .status-color-bar.empty {
-    background-color: #d2d2d0; /* 입찰중: 주황 계열 */
+    background-color: #d2d2d0; /* 입찰가능: 회색 계열 */
 }
 
 /* /static/css/pages/FWD_container_inquiry.css 파일 맨 아래에 추가 */

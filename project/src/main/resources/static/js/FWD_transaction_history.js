@@ -18,6 +18,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const summaryModalTitle = document.getElementById('summary-modal-title');
     const summaryModalBody = document.getElementById('summary-modal-body');
 
+	// [추가] 페이지 로드 시 기본 날짜(해당 월 1일 ~ 오늘)를 설정하는 함수
+	const setDefaultDates = () => {
+	    const today = new Date();
+	    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+	    // Date 객체를 'YYYY-MM-DD' 형식의 문자열로 변환하는 헬퍼 함수
+	    const formatDate = (date) => {
+	        const year = date.getFullYear();
+	        const month = String(date.getMonth() + 1).padStart(2, '0');
+	        const day = String(date.getDate()).padStart(2, '0');
+	        return `${year}-${month}-${day}`;
+	    };
+
+	    // 각 날짜 입력창에 기본값 설정
+	    startDateInput.value = formatDate(firstDayOfMonth);
+	    endDateInput.value = formatDate(today);
+	};
+	
+	
     async function fetchAndRenderTransactions() {
         const activeFilter = filterGroup.querySelector('.is-active');
         const filterType = activeFilter ? activeFilter.dataset.filter : 'all';
@@ -148,5 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
     summaryModal.querySelector('.btn-cancel').addEventListener('click', () => summaryModal.style.display = 'none');
 
     // 5. 페이지 첫 로딩 시 실행 (불필요한 updateCalcButtonState 함수 호출 제거)
-    fetchAndRenderTransactions();
+	// 5. 페이지 첫 로딩 시 실행
+	setDefaultDates(); // [추가] 기본 날짜 설정 함수를 먼저 호출
+	fetchAndRenderTransactions(); // 그 다음, 설정된 날짜로 데이터를 조회
 });

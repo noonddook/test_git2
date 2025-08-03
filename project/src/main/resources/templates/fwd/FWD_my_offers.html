@@ -107,24 +107,27 @@
 				</div>
 
 				<div class="pagination-container" th:if="${!myOffersPage.empty}">
-				    <nav>
+				    <nav th:with="page=${myOffersPage},
+				                   startPage = ${(page.number/10) * 10},
+				                   endPage = ${T(java.lang.Math).min(startPage + 9, page.totalPages - 1)}">
 				        <ul class="pagination">
-				            <li th:classappend="${myOffersPage.first} ? 'disabled'">
+				            <li th:classappend="${page.first} ? 'disabled'">
 				                <a th:href="@{/fwd/my-offers(page=0, sort=${param.sort}, status=${status}, keyword=${keyword})}">«</a>
 				            </li>
-				            <li th:classappend="${!myOffersPage.hasPrevious()} ? 'disabled'">
-				                <a th:href="@{/fwd/my-offers(page=${myOffersPage.number-1}, sort=${param.sort}, status=${status}, keyword=${keyword})}">‹</a>
+				            <li th:classappend="${startPage == 0} ? 'disabled'">
+				                <a th:href="@{/fwd/my-offers(page=${startPage - 1}, sort=${param.sort}, status=${status}, keyword=${keyword})}">‹</a>
 				            </li>
-				            <li th:each="i : ${#numbers.sequence(0, myOffersPage.totalPages - 1)}"
-				                th:if="${i >= myOffersPage.number - 2 && i <= myOffersPage.number + 2}"
-				                th:classappend="${i == myOffersPage.number} ? 'active'">
+				
+				            <li th:each="i : ${#numbers.sequence(startPage, endPage)}"
+				                th:classappend="${i == page.number} ? 'active'">
 				                <a th:href="@{/fwd/my-offers(page=${i}, sort=${param.sort}, status=${status}, keyword=${keyword})}" th:text="${i + 1}"></a>
 				            </li>
-				            <li th:classappend="${!myOffersPage.hasNext()} ? 'disabled'">
-				                <a th:href="@{/fwd/my-offers(page=${myOffersPage.number+1}, sort=${param.sort}, status=${status}, keyword=${keyword})}">›</a>
+				
+				            <li th:classappend="${endPage >= page.totalPages - 1} ? 'disabled'">
+				                <a th:href="@{/fwd/my-offers(page=${endPage + 1}, sort=${param.sort}, status=${status}, keyword=${keyword})}">›</a>
 				            </li>
-				            <li th:classappend="${myOffersPage.last} ? 'disabled'">
-				                <a th:href="@{/fwd/my-offers(page=${myOffersPage.totalPages - 1}, sort=${param.sort}, status=${status}, keyword=${keyword})}">»</a>
+				            <li th:classappend="${page.last} ? 'disabled'">
+				                <a th:href="@{/fwd/my-offers(page=${page.totalPages - 1}, sort=${param.sort}, status=${status}, keyword=${keyword})}">»</a>
 				            </li>
 				        </ul>
 				    </nav>

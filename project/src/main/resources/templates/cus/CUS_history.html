@@ -67,17 +67,24 @@
                 </table>
             </div>
 
-            <div class="pagination-container" th:if="${!historyPage.empty}">
-                <nav th:with="page=${historyPage}">
-                     <ul class="pagination">
-                         <li th:classappend="${page.first} ? 'disabled'"><a th:href="@{/cus/cusHistory(page=0)}">«</a></li>
-                         <li th:classappend="${!page.hasPrevious()} ? 'disabled'"><a th:href="@{/cus/cusHistory(page=${page.number-1})}">‹</a></li>
-                         <li th:each="i : ${#numbers.sequence(0, page.totalPages - 1)}" th:if="${i >= page.number - 2 && i <= page.number + 2}" th:classappend="${i == page.number} ? 'active'"><a th:href="@{/cus/cusHistory(page=${i})}" th:text="${i + 1}"></a></li>
-                         <li th:classappend="${!page.hasNext()} ? 'disabled'"><a th:href="@{/cus/cusHistory(page=${page.number+1})}">›</a></li>
-                         <li th:classappend="${page.last} ? 'disabled'"><a th:href="@{/cus/cusHistory(page=${page.totalPages - 1})}">»</a></li>
-                    </ul>
-                </nav>
-            </div>
+			<div class="pagination-container" th:if="${!historyPage.empty}">
+			    <nav th:with="page=${historyPage},
+			                   startPage = ${(page.number/10) * 10},
+			                   endPage = ${T(java.lang.Math).min(startPage + 9, page.totalPages - 1)}">
+			        <ul class="pagination">
+			            <li th:classappend="${page.first} ? 'disabled'"><a th:href="@{/cus/cusHistory(page=0, startDate=${startDate}, endDate=${endDate}, keyword=${keyword})}">«</a></li>
+			            <li th:classappend="${startPage == 0} ? 'disabled'"><a th:href="@{/cus/cusHistory(page=${startPage - 1}, startDate=${startDate}, endDate=${endDate}, keyword=${keyword})}">‹</a></li>
+			
+			            <li th:each="i : ${#numbers.sequence(startPage, endPage)}"
+			                th:classappend="${i == page.number} ? 'active'">
+			                <a th:href="@{/cus/cusHistory(page=${i}, startDate=${startDate}, endDate=${endDate}, keyword=${keyword})}" th:text="${i + 1}"></a>
+			            </li>
+			
+			            <li th:classappend="${endPage >= page.totalPages - 1} ? 'disabled'"><a th:href="@{/cus/cusHistory(page=${endPage + 1}, startDate=${startDate}, endDate=${endDate}, keyword=${keyword})}">›</a></li>
+			            <li th:classappend="${page.last} ? 'disabled'"><a th:href="@{/cus/cusHistory(page=${page.totalPages - 1}, startDate=${startDate}, endDate=${endDate}, keyword=${keyword})}">»</a></li>
+			        </ul>
+			    </nav>
+			</div>
         </section>
     </main>
 </div>

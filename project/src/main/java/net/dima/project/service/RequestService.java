@@ -140,16 +140,22 @@ public class RequestService {
         // 4. 상태(status) 탭 필터를 적용합니다.
         List<MyPostedRequestDto> filteredList;
         if (status != null && !status.isEmpty()) {
-        	filteredList = searchedList.stream()
+            filteredList = searchedList.stream()
                     .filter(dto -> {
+                        // "OPEN" 탭은 OPEN 상태의 요청만 필터링
                         if ("OPEN".equalsIgnoreCase(status)) {
                             return "OPEN".equals(dto.getStatus());
                         }
+                        // "CLOSED" 탭은 CLOSED 상태의 모든 요청을 포함
+                        if ("CLOSED".equalsIgnoreCase(status)) {
+                            return "CLOSED".equals(dto.getStatus());
+                        }
+                        // 그 외 (ACCEPTED, CONFIRMED 등)는 상세 상태(detailedStatus)로 필터링
                         return dto.getDetailedStatus() != null && status.equalsIgnoreCase(dto.getDetailedStatus());
                     })
                     .collect(Collectors.toList());
         } else {
-        	filteredList = searchedList;
+            filteredList = searchedList;
         }
 
         // 5. 최종 목록으로 페이지네이션 객체를 만듭니다.

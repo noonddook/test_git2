@@ -153,29 +153,32 @@
 				    </article>
 				</div>
 
-                <div class="pagination-container" th:if="${!requestsPage.empty}">
-                    <nav>
-                        <ul class="pagination">
-                            <li th:classappend="${requestsPage.first} ? 'disabled'">
-                                <a th:href="@{/fwd/fwdRequest(page=0, sort=${requestsPage.sort.toString().replace(': ', ',')}, itemName=${param.itemName})}">«</a>
-                            </li>
-                            <li th:classappend="${!requestsPage.hasPrevious()} ? 'disabled'">
-                                <a th:href="@{/fwd/fwdRequest(page=${requestsPage.number-1}, sort=${requestsPage.sort.toString().replace(': ', ',')}, itemName=${param.itemName})}">‹</a>
-                            </li>
-                            <li th:each="i : ${#numbers.sequence(0, requestsPage.totalPages - 1)}"
-                                th:if="${i >= requestsPage.number - 2 && i <= requestsPage.number + 2}" 
-                                th:classappend="${i == requestsPage.number} ? 'active'">
-                                <a th:href="@{/fwd/fwdRequest(page=${i}, sort=${requestsPage.sort.toString().replace(': ', ',')}, itemName=${param.itemName})}" th:text="${i + 1}"></a>
-                            </li>
-                            <li th:classappend="${!requestsPage.hasNext()} ? 'disabled'">
-                                <a th:href="@{/fwd/fwdRequest(page=${requestsPage.number+1}, sort=${requestsPage.sort.toString().replace(': ', ',')}, itemName=${param.itemName})}">›</a>
-                            </li>
-                            <li th:classappend="${requestsPage.last} ? 'disabled'">
-                                <a th:href="@{/fwd/fwdRequest(page=${requestsPage.totalPages - 1}, sort=${requestsPage.sort.toString().replace(': ', ',')}, itemName=${param.itemName})}">»</a>
-                            </li>
-                        </ul>
-                    </nav>
-                </div>
+				<div class="pagination-container" th:if="${!requestsPage.empty}">
+				    <nav th:with="page=${requestsPage},
+				                   startPage = ${(page.number/10) * 10},
+				                   endPage = ${T(java.lang.Math).min(startPage + 9, page.totalPages - 1)}">
+				        <ul class="pagination">
+				            <li th:classappend="${page.first} ? 'disabled'">
+				                <a th:href="@{/fwd/fwdRequest(page=0, sort=${param.sort}, tradeType=${param.tradeType}, transportType=${param.transportType}, departurePort=${param.departurePort}, arrivalPort=${param.arrivalPort}, itemName=${param.itemName}, excludeClosed=${param.excludeClosed})}">«</a>
+				            </li>
+				            <li th:classappend="${startPage == 0} ? 'disabled'">
+				                <a th:href="@{/fwd/fwdRequest(page=${startPage - 1}, sort=${param.sort}, tradeType=${param.tradeType}, transportType=${param.transportType}, departurePort=${param.departurePort}, arrivalPort=${param.arrivalPort}, itemName=${param.itemName}, excludeClosed=${param.excludeClosed})}">‹</a>
+				            </li>
+				
+				            <li th:each="i : ${#numbers.sequence(startPage, endPage)}"
+				                th:classappend="${i == page.number} ? 'active'">
+				                <a th:href="@{/fwd/fwdRequest(page=${i}, sort=${param.sort}, tradeType=${param.tradeType}, transportType=${param.transportType}, departurePort=${param.departurePort}, arrivalPort=${param.arrivalPort}, itemName=${param.itemName}, excludeClosed=${param.excludeClosed})}" th:text="${i + 1}"></a>
+				            </li>
+				
+				            <li th:classappend="${endPage >= page.totalPages - 1} ? 'disabled'">
+				                <a th:href="@{/fwd/fwdRequest(page=${endPage + 1}, sort=${param.sort}, tradeType=${param.tradeType}, transportType=${param.transportType}, departurePort=${param.departurePort}, arrivalPort=${param.arrivalPort}, itemName=${param.itemName}, excludeClosed=${param.excludeClosed})}">›</a>
+				            </li>
+				            <li th:classappend="${page.last} ? 'disabled'">
+				                <a th:href="@{/fwd/fwdRequest(page=${page.totalPages - 1}, sort=${param.sort}, tradeType=${param.tradeType}, transportType=${param.transportType}, departurePort=${param.departurePort}, arrivalPort=${param.arrivalPort}, itemName=${param.itemName}, excludeClosed=${param.excludeClosed})}">»</a>
+				            </li>
+				        </ul>
+				    </nav>
+				</div>
             </section>
         </main>
     </div>

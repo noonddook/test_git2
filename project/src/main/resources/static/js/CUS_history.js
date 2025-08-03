@@ -4,11 +4,35 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchForm = document.getElementById('search-form');
     const calcButton = document.getElementById('btn-calculate-summary');
     const summaryModal = document.getElementById('summary-modal');
-
+	// [추가] 날짜 입력 필드를 변수로 가져옵니다.
+	const startDateInput = document.getElementById('start-date');
+	const endDateInput = document.getElementById('end-date');
+	
+	
     if (!searchForm || !calcButton || !summaryModal) {
         console.error("필수 요소를 찾을 수 없습니다.");
         return;
     }
+	
+	// [추가] 페이지 로드 시 기본 날짜(해당 월 1일 ~ 오늘)를 설정하는 함수
+	const setDefaultDates = () => {
+	    const today = new Date();
+	    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+	    const formatDate = (date) => {
+	        const year = date.getFullYear();
+	        const month = String(date.getMonth() + 1).padStart(2, '0');
+	        const day = String(date.getDate()).padStart(2, '0');
+	        return `${year}-${month}-${day}`;
+	    };
+
+	    // URL에 이미 날짜 파라미터가 없는 경우에만 기본값을 설정합니다.
+	    const params = new URLSearchParams(window.location.search);
+	    if (!params.has('startDate') && !params.has('endDate')) {
+	        startDateInput.value = formatDate(firstDayOfMonth);
+	        endDateInput.value = formatDate(today);
+	    }
+	};
 
     // --- 검색 기능 ---
     searchForm.addEventListener('submit', (e) => {
@@ -69,4 +93,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     summaryModal.querySelector('.btn-close').addEventListener('click', () => summaryModal.style.display = 'none');
     summaryModal.querySelector('.btn-cancel').addEventListener('click', () => summaryModal.style.display = 'none');
+	// [추가] 페이지가 처음 로드될 때 기본 날짜 설정 함수를 호출합니다.
+	setDefaultDates();
 });

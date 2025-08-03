@@ -40,15 +40,15 @@ public interface OfferRepository extends JpaRepository<OfferEntity, Long>, JpaSp
      * 컨테이너조회 상세보기 기능을 위한 쿼리
      */
     @Query("SELECT o FROM OfferEntity o " +
-           "JOIN FETCH o.request r " +
-           "JOIN FETCH r.cargo c " +
-           "WHERE o.container.containerId = :containerId " +
-           "AND o.status = :status " +
-           "AND o.forwarder = :forwarder")
-    List<OfferEntity> findDetailsByContainerAndStatus(
-            @Param("containerId") String containerId,
-            @Param("status") OfferStatus status, 
-            @Param("forwarder") UserEntity forwarder);
+            "JOIN FETCH o.request r " +
+            "JOIN FETCH r.cargo c " +
+            "WHERE o.container.containerId = :containerId " +
+            "AND o.status IN :statuses " +
+            "AND o.forwarder = :forwarder")
+     List<OfferEntity> findDetailsByContainerAndStatusInWithAllDetails(
+             @Param("containerId") String containerId,
+             @Param("statuses") List<OfferStatus> statuses,
+             @Param("forwarder") UserEntity forwarder);
     
     /**
      * 나의제안조회 상세보기 기능을 위한 쿼리

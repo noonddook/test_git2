@@ -35,25 +35,50 @@ public class CusController {
     private final TransactionHistoryService transactionHistoryService;
     
  // [✅ cusRequest 메서드를 아래 코드로 교체해주세요]
+    // [수정] '나의요청 관리'는 이제 '제안받는중(OPEN)' 상태만 조회합니다.
     @GetMapping("/cusRequest")
     public String cusRequest(Model model, Authentication authentication,
-                             @RequestParam(name = "status", required = false) String status,
-                             // ★★★ 핵심 수정 1: excludeClosed 파라미터를 받도록 추가 ★★★
                              @RequestParam(name = "excludeClosed", defaultValue = "true") boolean excludeClosed,
                              @RequestParam(name = "itemName", required = false) String itemName,
                              @PageableDefault(size = 5, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         
         String userId = authentication.getName();
-        // [✅ 수정] 서비스 호출 시 excludeClosed 값을 함께 전달합니다.
-        Page<MyPostedRequestDto> requestPage = requestService.getRequestsForShipper(userId, status, excludeClosed, itemName, pageable);
+        // status를 "OPEN"으로 고정하여 '제안받는중'인 요청만 가져옵니다.
+        Page<MyPostedRequestDto> requestPage = requestService.getRequestsForShipper(userId, "OPEN", excludeClosed, itemName, pageable);
 
         model.addAttribute("requestPage", requestPage);
         model.addAttribute("activeMenu", "cusRequest");
-        model.addAttribute("status", status);
-        model.addAttribute("excludeClosed", excludeClosed);  // [✅ 추가] 뷰에서 현재 필터 상태를 알 수 있도록 모델에 값을 추가합니다.
-        model.addAttribute("itemName", itemName); 
+        model.addAttribute("excludeClosed", excludeClosed);
+        model.addAttribute("itemName", itemName);
+        
+        // [추가] 현재 정렬 상태를 View에 전달하는 코드
+        String currentSortField = pageable.getSort().iterator().next().getProperty();
+        String currentSortDirection = pageable.getSort().iterator().next().getDirection().name();
+        model.addAttribute("currentSortField", currentSortField);
+        model.addAttribute("reverseSortDirection", "ASC".equalsIgnoreCase(currentSortDirection) ? "desc" : "asc");
         
         return "cus/CUS_request";
+    }
+
+    
+    // [추가] '운송중인 화물' 페이지
+    @GetMapping("/tracking")
+    public String cusTracking(Model model, Authentication authentication,
+                              @RequestParam(name = "status", required = false) String status,
+                              @RequestParam(name = "itemName", required = false) String itemName,
+                              @PageableDefault(size = 5, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        
+        String userId = authentication.getName();
+        // status 파라미터가 없으면 'CLOSED' 상태의 모든 요청을 가져옵니다.
+        String searchStatus = (status == null || status.isEmpty()) ? "CLOSED" : status;
+        Page<MyPostedRequestDto> requestPage = requestService.getRequestsForShipper(userId, searchStatus, false, itemName, pageable);
+
+        model.addAttribute("requestPage", requestPage);
+        model.addAttribute("activeMenu", "cusTracking");
+        model.addAttribute("status", status);
+        model.addAttribute("itemName", itemName);
+
+        return "cus/CUS_tracking";
     }
 
     /**

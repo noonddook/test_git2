@@ -16,21 +16,15 @@
   </div>
 
   <!-- (CUS 전용) 메뉴 목록 -->
-  <nav class="menu">
+<nav class="menu">
     <ul>
-      <!-- 1. 나의요청조회 -->
       <li class="menu-item" th:classappend="${activeMenu == 'cusRequest'} ? 'is-active' : ''">
-        <!-- 
-                  - 링크: /cus/request
-                  - activeMenu 값이 'cusRequest'일 때 'is-active' 클래스가 a 태그에 추가됩니다.
-                -->
         <a th:href="@{/cus/cusRequest}">나의요청조회</a>
       </li>
-
-      <!-- 2. 요청이력조회 -->
+      <li class="menu-item" th:classappend="${activeMenu == 'cusTracking'} ? 'is-active' : ''">
+        <a th:href="@{/cus/tracking}">운송중인 화물</a>
+      </li>
       <li class="menu-item" th:classappend="${activeMenu == 'cusHistory'} ? 'is-active' : ''">
-        <!--- 링크: /cus/history (추후 만들 페이지)
-          - activeMenu 값이 'cusHistory'일 때 'is-active' 클래스가 a 태그에 추가됩니다.    -->
         <a th:href="@{/cus/cusHistory}">요청이력조회</a>
       </li>
     </ul>

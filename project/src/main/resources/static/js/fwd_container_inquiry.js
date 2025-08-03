@@ -261,7 +261,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 		     try {
 		         // 확정된 모든 화물 정보를 가져오기 위해 'CONFIRMED' 상태로 API 호출
-		         const response = await fetch(`/api/fwd/details/${containerId}/CONFIRMED`);
+				 // [수정] 컨테이너의 실제 상태(CONFIRMED, SHIPPED 등)를 가져와 API를 호출
+				 const containerStatus = card.querySelector('.header-actions .btn')?.textContent.trim() === '선적완료' ? 'SHIPPED'
+				                       : card.querySelector('.header-actions .btn')?.textContent.trim() === '운송완료' ? 'COMPLETED'
+				                       : 'CONFIRMED';
+				 const response = await fetch(`/api/fwd/details/${containerId}/${containerStatus}`);
 		         if (!response.ok) throw new Error(`서버 오류: ${response.statusText}`);
 		         
 		         const detailsData = await response.json();

@@ -74,17 +74,24 @@
 
         <div class="offer-details-container"></div>
                     </div>
-                    <div class="pagination-container" th:if="${!myRequestsPage.empty}">
-                        <nav th:with="page=${myRequestsPage}">
-                            <ul class="pagination">
-                                 <li th:classappend="${page.first} ? 'disabled'"><a th:href="@{/fwd/my-posted-requests(page=0, status=${status})}">«</a></li>
-                                 <li th:classappend="${!page.hasPrevious()} ? 'disabled'"><a th:href="@{/fwd/my-posted-requests(page=${page.number-1}, status=${status})}">‹</a></li>
-                                 <li th:each="i : ${#numbers.sequence(0, page.totalPages - 1)}" th:if="${i >= page.number - 2 && i <= page.number + 2}" th:classappend="${i == page.number} ? 'active'"><a th:href="@{/fwd/my-posted-requests(page=${i}, status=${status})}" th:text="${i + 1}"></a></li>
-                                 <li th:classappend="${!page.hasNext()} ? 'disabled'"><a th:href="@{/fwd/my-posted-requests(page=${page.number+1}, status=${status})}">›</a></li>
-                                 <li th:classappend="${page.last} ? 'disabled'"><a th:href="@{/fwd/my-posted-requests(page=${page.totalPages - 1}, status=${status})}">»</a></li>
-                            </ul>
-                        </nav>
-                    </div>
+					<div class="pagination-container" th:if="${!myRequestsPage.empty}">
+					    <nav th:with="page=${myRequestsPage},
+					                   startPage = ${(page.number/10) * 10},
+					                   endPage = ${T(java.lang.Math).min(startPage + 9, page.totalPages - 1)}">
+					        <ul class="pagination">
+					            <li th:classappend="${page.first} ? 'disabled'"><a th:href="@{/fwd/my-posted-requests(page=0, status=${status})}">«</a></li>
+					            <li th:classappend="${startPage == 0} ? 'disabled'"><a th:href="@{/fwd/my-posted-requests(page=${startPage - 1}, status=${status})}">‹</a></li>
+					
+					            <li th:each="i : ${#numbers.sequence(startPage, endPage)}"
+					                th:classappend="${i == page.number} ? 'active'">
+					                <a th:href="@{/fwd/my-posted-requests(page=${i}, status=${status})}" th:text="${i + 1}"></a>
+					            </li>
+					
+					            <li th:classappend="${endPage >= page.totalPages - 1} ? 'disabled'"><a th:href="@{/fwd/my-posted-requests(page=${endPage + 1}, status=${status})}">›</a></li>
+					            <li th:classappend="${page.last} ? 'disabled'"><a th:href="@{/fwd/my-posted-requests(page=${page.totalPages - 1}, status=${status})}">»</a></li>
+					        </ul>
+					    </nav>
+					</div>
              <template id="bidders-list-template">
                 <table class="bids-table">
                     <thead>

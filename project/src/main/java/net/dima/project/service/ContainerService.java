@@ -223,39 +223,47 @@ public class ContainerService {
     public List<CargoDetailDto> getDetailsForContainerStatus(String containerId, String statusString, String currentUserId) {
         UserEntity forwarder = userRepository.findByUserId(currentUserId);
         OfferStatus status = OfferStatus.valueOf(statusString.toUpperCase());
+        List<CargoDetailDto> details = new ArrayList<>();
 
-        List<OfferEntity> offers = offerRepository.findDetailsByContainerAndStatusWithAllDetails(containerId, status, forwarder);
-        
-        // ★★★ 핵심 수정 1: 재판매 요청 정보를 미리 Map에 담아 준비합니다 ★★★
-        Map<Long, Long> resaleRequestIdMap = new java.util.HashMap<>();
-        if (status == OfferStatus.FOR_SALE && !offers.isEmpty()) {
-            List<RequestEntity> resaleRequests = requestRepository.findBySourceOfferIn(offers);
-            resaleRequests.forEach(req -> 
-                resaleRequestIdMap.put(req.getSourceOffer().getOfferId(), req.getRequestId())
-            );
-        }
-
-        List<CargoDetailDto> details = offers.stream().map(offer -> {
-            Double cbmValue = offer.getRequest().getCargo().getTotalCbm();
+        // 1. [핵심 수정] 확정 이후 상태일 경우, 관련된 모든 상태의 화물을 조회합니다.
+        if (status == OfferStatus.CONFIRMED || status == OfferStatus.SHIPPED || status == OfferStatus.COMPLETED) {
+            List<OfferStatus> finalizedStatuses = List.of(OfferStatus.ACCEPTED, OfferStatus.CONFIRMED, OfferStatus.SHIPPED, OfferStatus.COMPLETED);
+            List<OfferEntity> offers = offerRepository.findDetailsByContainerAndStatusInWithAllDetails(containerId, finalizedStatuses, forwarder);
             
-            // ★★★ 핵심 수정 2: DB를 다시 조회하는 대신, 미리 준비된 Map에서 데이터를 찾습니다 ★★★
-            Long resaleReqId = resaleRequestIdMap.get(offer.getOfferId());
-
-            return CargoDetailDto.builder()
+            details.addAll(offers.stream().map(offer -> CargoDetailDto.builder()
                     .offerId(offer.getOfferId())
                     .itemName(offer.getRequest().getCargo().getItemName())
-                    .cbm(cbmValue)
+                    .cbm(offer.getRequest().getCargo().getTotalCbm())
                     .freightCost(offer.getPrice())
                     .freightCurrency(offer.getCurrency())
                     .status(offer.getStatus().name())
                     .external(false)
                     .deadline(offer.getRequest().getDeadline())
-                    .resaleRequestId(resaleReqId)
-                    .build();
-        }).collect(Collectors.toList());
+                    .build()).collect(Collectors.toList()));
+        
+        // 2. [핵심 수정] 확정 전 상태(입찰중, 재판매중)는 기존 로직을 그대로 사용합니다.
+        } else {
+            List<OfferEntity> offers = offerRepository.findDetailsByContainerAndStatusWithAllDetails(containerId, status, forwarder);
+            Map<Long, Long> resaleRequestIdMap = new java.util.HashMap<>();
+            if (status == OfferStatus.FOR_SALE && !offers.isEmpty()) {
+                List<RequestEntity> resaleRequests = requestRepository.findBySourceOfferIn(offers);
+                resaleRequests.forEach(req -> resaleRequestIdMap.put(req.getSourceOffer().getOfferId(), req.getRequestId()));
+            }
+            details.addAll(offers.stream().map(offer -> CargoDetailDto.builder()
+                    .offerId(offer.getOfferId())
+                    .itemName(offer.getRequest().getCargo().getItemName())
+                    .cbm(offer.getRequest().getCargo().getTotalCbm())
+                    .freightCost(offer.getPrice())
+                    .freightCurrency(offer.getCurrency())
+                    .status(offer.getStatus().name())
+                    .external(false)
+                    .deadline(offer.getRequest().getDeadline())
+                    .resaleRequestId(resaleRequestIdMap.get(offer.getOfferId()))
+                    .build()).collect(Collectors.toList()));
+        }
 
-        // 외부 화물 조회 로직은 그대로 유지
-        if (status == OfferStatus.ACCEPTED || status == OfferStatus.CONFIRMED) {
+        // 3. [핵심 수정] 외부 화물 조회 로직을 분리하여 확정 이후 상태일 때 항상 포함되도록 합니다.
+        if (status == OfferStatus.ACCEPTED || status == OfferStatus.CONFIRMED || status == OfferStatus.SHIPPED || status == OfferStatus.COMPLETED) {
             List<ContainerCargoEntity> externalCargos = containerCargoRepository.findExternalCargosByContainerId(containerId, true);
             for (ContainerCargoEntity cargo : externalCargos) {
                 details.add(CargoDetailDto.builder()

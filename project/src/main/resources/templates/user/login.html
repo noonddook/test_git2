@@ -13,10 +13,9 @@
 <body>
     <main class="login-container">
         <!-- 로고 -->
-        <div class="logo">
-            <span class="logo-icon">G</span>SEAIRHUB
-        </div>
-
+        <a href="/" class="logo">
+            <img th:src="@{/images/logo_long.png}" alt="SEAIRHUB">
+        </a>
         <!-- 로그인 폼 -->
         <form class="login-form" action="/loginProc" method="POST">
             <!-- 회원가입 성공 메시지 -->

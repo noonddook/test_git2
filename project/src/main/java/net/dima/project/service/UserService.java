@@ -64,6 +64,18 @@ public class UserService {
         userDTO.setUserPwd(bCryptPasswordEncoder.encode(userDTO.getUserPwd()));
         // 역할 설정
         userDTO.setRoles(role);
+        
+        // [추가] 포워더(fwd)로 가입 시, 기본 승인 상태를 PENDING으로 설정
+        // [수정] 역할을 설정하는 로직을 아래와 같이 변경합니다.
+        if ("ROLE_fwd".equals(role)) {
+            // 포워더로 가입 신청 시, 역할은 '승인 대기'로, 승인 상태도 'PENDING'으로 설정
+            userDTO.setRoles("ROLE_PENDING");
+            userDTO.setApprovalStatus("PENDING");
+        } else {
+            // 화주는 즉시 승인 및 역할 부여
+            userDTO.setRoles("ROLE_cus");
+            userDTO.setApprovalStatus("APPROVED");
+        }
 
         // DTO를 Entity로 변환하여 DB에 저장
         UserEntity userEntity = UserEntity.toEntity(userDTO);

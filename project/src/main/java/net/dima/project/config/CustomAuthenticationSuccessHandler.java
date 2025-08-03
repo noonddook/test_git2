@@ -39,8 +39,11 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
             String role = authority.getAuthority();
             
          // [✅ 추가] 관리자(ROLE_admin)를 가장 먼저 확인
-            if ("ROLE_admin".equals(role)) {
-                targetUrl = "/adm/main"; // 관리자는 관리자 대시보드로
+            if ("ROLE_PENDING".equals(role)) {
+                targetUrl = "/pending-approval-page"; // 승인 대기 안내 페이지로
+                break;
+            } else if ("ROLE_admin".equals(role)) {
+                targetUrl = "/adm/dashboard";
                 break;
             } else if ("ROLE_fwd".equals(role)) {
                 targetUrl = "/fwd/fwdRequest"; // 포워더는 포워더 대시보드로

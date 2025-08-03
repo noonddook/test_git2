@@ -64,6 +64,9 @@ public class UserEntity {
     @Builder.Default
     @Column(name="roles")
     private String roles = "ROLE_USER"; // 사용자 권한 ("ROLE_fwd", "ROLE_cus" 등)
+    
+    @Column(name="approval_status") // [추가] 승인 상태 필드
+    private String approvalStatus;
 
     @Column(name="create_date", updatable = false) // 생성 시간은 업데이트되지 않도록 설정
     @CreationTimestamp // 데이터 생성 시 자동으로 현재 시간 기록
@@ -88,6 +91,7 @@ public class UserEntity {
                 .businessLicenseOrigName(userDTO.getBusinessLicenseOrigName())
                 .businessLicenseSavedName(userDTO.getBusinessLicenseSavedName())
                 .roles(userDTO.getRoles())
+                .approvalStatus(userDTO.getApprovalStatus()) // [추가]
                 .build();
     }
 }

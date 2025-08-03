@@ -13,8 +13,9 @@ import org.springframework.data.repository.query.Param;
 // @Param은 더 이상 필요 없으므로 import 문을 지워도 됩니다.
 import org.springframework.stereotype.Repository;
 import org.springframework.data.domain.Page;    // [✅ import 추가]
-import org.springframework.data.domain.Pageable; 
+import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -68,5 +69,11 @@ public interface RequestRepository extends JpaRepository<RequestEntity, Long>, J
     
     @Query("SELECT r FROM RequestEntity r WHERE r.sourceOffer = :sourceOffer ORDER BY r.createdAt DESC")
     List<RequestEntity> findBySourceOfferOrderedByCreatedAtDesc(@Param("sourceOffer") OfferEntity sourceOffer);
+    
+    long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
+
+    // [추가] 마감일이 임박했는데도 입찰이 없는 요청 수를 세는 메서드
+    @Query("SELECT COUNT(r) FROM RequestEntity r WHERE r.status = 'OPEN' AND r.deadline < :deadlineThreshold AND NOT EXISTS (SELECT o FROM OfferEntity o WHERE o.request = r)")
+    long countOpenRequestsWithNoBids(@Param("deadlineThreshold") LocalDateTime deadlineThreshold);
 
 }

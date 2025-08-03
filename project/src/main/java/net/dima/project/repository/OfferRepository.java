@@ -1,19 +1,22 @@
 package net.dima.project.repository;
 
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
 import net.dima.project.entity.ContainerEntity;
+import net.dima.project.entity.ContainerStatus;
 import net.dima.project.entity.OfferEntity;
 import net.dima.project.entity.OfferStatus;
 import net.dima.project.entity.RequestEntity;
 import net.dima.project.entity.UserEntity;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
-import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
 
 @Repository
 public interface OfferRepository extends JpaRepository<OfferEntity, Long>, JpaSpecificationExecutor<OfferEntity> {
@@ -108,5 +111,15 @@ public interface OfferRepository extends JpaRepository<OfferEntity, Long>, JpaSp
             @Param("status") OfferStatus status,
             @Param("forwarder") UserEntity forwarder);
     
+ // ... 기존 코드 ...
+    @Query("SELECT o FROM OfferEntity o JOIN FETCH o.request r JOIN FETCH r.cargo c WHERE o.container.status = :status")
+    List<OfferEntity> findAllByContainerStatus(@Param("status") ContainerStatus status);
+    
+    long countByStatusAndCreatedAtBetween(OfferStatus status, LocalDateTime start, LocalDateTime end);
 
+    
+    long countByForwarder(UserEntity forwarder); // [추가]
+
+    // [추가] 낙찰 성공 건수 (재판매 포함)
+    long countByForwarderAndStatusIn(UserEntity forwarder, List<OfferStatus> statuses);
 }

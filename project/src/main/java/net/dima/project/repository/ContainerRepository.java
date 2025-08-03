@@ -15,4 +15,9 @@ public interface ContainerRepository extends JpaRepository<ContainerEntity, Stri
     List<ContainerEntity> findByForwarder(UserEntity forwarder, Sort sort);
     // [✅ 이 메서드 선언을 추가해주세요]
     List<ContainerEntity> findByForwarderAndStatusNot(UserEntity forwarder, ContainerStatus status, Sort sort);
+    
+ // ... 기존 코드 ...
+    List<ContainerEntity> findByStatus(ContainerStatus status);
+    
+    long countByForwarder(UserEntity forwarder); // [추가]
 }

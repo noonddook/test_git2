@@ -25,6 +25,7 @@ public class UserDTO {
 	private String companyName;
     private String phoneNum;
 	private String roles;
+    private String approvalStatus; // [추가]
 	private LocalDateTime createDate;
     private String businessNum;
     private String businessLicenseOrigName;
@@ -53,6 +54,7 @@ public class UserDTO {
                 .businessLicenseOrigName(userEntity.getBusinessLicenseOrigName())
                 .businessLicenseSavedName(userEntity.getBusinessLicenseSavedName())
 	            .roles(userEntity.getRoles())
+	            .approvalStatus(userEntity.getApprovalStatus()) 
 	            .createDate(userEntity.getCreateDate())
 	            .build();
 	}

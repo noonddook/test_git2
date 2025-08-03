@@ -20,6 +20,38 @@ document.addEventListener('DOMContentLoaded', () => {
         closeModalBtn.addEventListener('click', closeModal);
         cancelBtn.addEventListener('click', closeModal);
 
+		// [추가] 출발/도착항 선택 연동 로직
+		const departurePortSelect = document.getElementById('departurePort');
+		const arrivalPortSelect = document.getElementById('arrivalPort');
+
+		const updatePortOptions = () => {
+		    const departureValue = departurePortSelect.value;
+		    const arrivalValue = arrivalPortSelect.value;
+
+		    // 도착항의 모든 옵션을 순회하며 출발항에서 선택된 값을 비활성화
+		    for (const option of arrivalPortSelect.options) {
+		        if (option.value && option.value === departureValue) {
+		            option.disabled = true;
+		        } else {
+		            option.disabled = false;
+		        }
+		    }
+
+		    // 출발항의 모든 옵션을 순회하며 도착항에서 선택된 값을 비활성화
+		    for (const option of departurePortSelect.options) {
+		        if (option.value && option.value === arrivalValue) {
+		            option.disabled = true;
+		        } else {
+		            option.disabled = false;
+		        }
+		    }
+		};
+
+		// 각 드롭다운 메뉴에 변경 이벤트가 발생할 때마다 함수를 호출
+		departurePortSelect.addEventListener('change', updatePortOptions);
+		arrivalPortSelect.addEventListener('change', updatePortOptions);
+		
+		
         requestForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             

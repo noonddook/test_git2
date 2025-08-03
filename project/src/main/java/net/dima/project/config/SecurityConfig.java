@@ -31,12 +31,15 @@ public class SecurityConfig {
                 "/cus/join", "/cus/joinProc",
                 "/kakao/additional-info", "/kakao/complete-registration",
                 "/user/confirmId", "/user/confirmEmail",
-                "/images/**", "/js/**", "/css/**"
+                "/images/**", "/js/**", "/css/**",
+                "/approval-pending" // [추가] 승인 대기 페이지는 모두 접근 가능하도록
             ).permitAll()
+            .requestMatchers("/download/**").authenticated() 
             .requestMatchers("/adm/**").hasRole("admin")
             .requestMatchers("/fwd/**", "/api/fwd/**").hasRole("fwd")
             .requestMatchers("/cus/**").hasRole("cus")
             .requestMatchers("/my/**").hasAnyRole("ADMIN","fwd","cus")
+            .requestMatchers("/pending-approval-page").hasRole("PENDING")
             .anyRequest().authenticated()
         );
 

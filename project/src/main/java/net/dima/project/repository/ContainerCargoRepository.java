@@ -3,6 +3,7 @@ package net.dima.project.repository;
 import net.dima.project.entity.ContainerCargoEntity;
 import net.dima.project.entity.ContainerEntity;
 import net.dima.project.entity.OfferEntity;
+import net.dima.project.entity.UserEntity;
 
 import java.util.List;
 import java.util.Optional;
@@ -42,5 +43,5 @@ public interface ContainerCargoRepository extends JpaRepository<ContainerCargoEn
     
  // [✅ ContainerCargoRepository.java에 이 메서드를 추가해주세요]
     boolean existsByOffer_OfferId(Long offerId);
-    
+
 }

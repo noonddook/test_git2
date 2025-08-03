@@ -153,8 +153,24 @@
                 </div>
                 <h4>운송 정보</h4>
                 <div class="form-grid">
-                    <input type="text" id="departurePort" class="form-input" placeholder="출발항 (예: 부산)" required>
-                    <input type="text" id="arrivalPort" class="form-input" placeholder="도착항 (예: 도쿄)" required>
+					<select id="departurePort" class="form-input" required>
+					    <option value="" disabled selected>출발항 선택</option>
+					    <option value="도쿄">도쿄</option>
+					    <option value="부산">부산</option>
+					    <option value="상해">상해</option>
+					    <option value="싱가포르">싱가포르</option>
+					    <option value="인천">인천</option>
+					    <option value="오사카">오사카</option>
+					</select>
+					<select id="arrivalPort" class="form-input" required>
+					    <option value="" disabled selected>도착항 선택</option>
+					    <option value="도쿄">도쿄</option>
+					    <option value="부산">부산</option>
+					    <option value="상해">상해</option>
+					    <option value="싱가포르">싱가포르</option>
+					    <option value="인천">인천</option>
+					    <option value="오사카">오사카</option>
+					</select>
                     <div class="form-row" style="grid-column: 1 / -1;">
                         <label for="desiredArrivalDate" style="font-size:14px; margin-bottom: 4px; display:block;">희망 도착일</label>
                         <input type="date" id="desiredArrivalDate" class="form-input">

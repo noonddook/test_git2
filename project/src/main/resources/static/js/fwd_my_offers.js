@@ -78,15 +78,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await response.json();
                 const detailsClone = detailsTemplate.content.cloneNode(true);
                 
-                const statusBadge = offerCard.querySelector('.status-badge');
-                const offerStatusText = statusBadge ? statusBadge.textContent : '';
+				// ▼▼▼ 기존 상세보기 로직 try-catch 블록 안에 이 코드를 추가해주세요 ▼▼▼
+				const statusBadge = offerCard.querySelector('.status-badge');
+				const offerStatusText = statusBadge ? statusBadge.textContent.trim() : '';
+				
+				// ▼▼▼ '화주' 관련 로직을 아래 코드로 교체해주세요 ▼▼▼
+				const requesterCompanyEl = detailsClone.querySelector('[data-field-container="requesterCompanyName"]');
+				if (data.requesterCompanyName) {
+				    requesterCompanyEl.querySelector('[data-field="requesterCompanyName"]').textContent = data.requesterCompanyName;
+				} else {
+				    // 데이터가 없으면 화주 정보 div 자체를 숨깁니다.
+				    requesterCompanyEl.style.display = 'none';
+				}
+				// ▲▲▲ 여기까지 교체 ▲▲▲
 
-                detailsClone.querySelector('[data-field="cargoId"]').textContent = data.cargoId;
 				detailsClone.querySelector('[data-field="itemName"]').textContent = data.itemName; // [✅ 이 줄을 추가해주세요]
                 detailsClone.querySelector('[data-field="requesterCompanyName"]').textContent = data.requesterCompanyName || 'N/A';
                 detailsClone.querySelector('[data-field="deadline"]').textContent = data.deadline;
                 detailsClone.querySelector('[data-field="cbm"]').textContent = `${data.cbm.toFixed(2)} CBM`;
                 detailsClone.querySelector('[data-field="containerId"]').textContent = data.containerId;
+
 
                 const priceItemContainer = detailsClone.querySelector('.detail-item-price');
                 
@@ -99,6 +110,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     priceItemContainer.querySelector('.offer-actions').style.display = 'none';
                 }
 
+				
+				// '거절' 상태일 때만 최종 낙찰 정보 표시
+				if (offerStatusText === '거절') {
+				    const finalBidInfoEl = detailsClone.querySelector('.final-bid-info');
+				    const finalBidResultEl = finalBidInfoEl.querySelector('[data-field="finalBidResult"]');
+				    
+				    if (data.closedWithoutWinner) {
+				        finalBidResultEl.textContent = '낙찰 없이 마감되었습니다.';
+				        finalBidResultEl.style.color = '#6c757d'; // 회색 텍스트
+				    } else {
+				        finalBidResultEl.innerHTML = `<strong>운임:</strong> ${data.finalPrice.toLocaleString()} ${data.finalCurrency}`;
+				        finalBidResultEl.style.color = '#28a745'; // 녹색 텍스트
+				    }
+				    finalBidInfoEl.style.display = 'block';
+				}
+				// ▲▲▲ 여기까지 추가 ▲▲▲
                 detailsContainer.innerHTML = '';
                 detailsContainer.appendChild(detailsClone);
                 offerCard.classList.add('is-expanded');

@@ -77,7 +77,7 @@
 								    <span class="arrow">→</span>
 								    <span class="port arrival" th:text="${offer.arrivalPort}"></span>
 								    
-								    <span class="request-date" th:text="'마감: ' + ${offer.deadlineForDisplay}"></span>
+
 								    <span th:if="${offer.desiredArrivalDate != null}" 
 								          th:text="'희망도착: ' + ${#temporals.format(offer.desiredArrivalDate, 'yyyy-MM-dd')}"
 								          style="font-weight: 500; color: #007bff; margin-left: 8px;"></span>
@@ -153,23 +153,30 @@
 
 	<template id="offer-details-template">
 	    <div class="details-grid">
-	        <div class="detail-item">
-	            <span class="label">화물 번호</span>
-	            <span class="value" data-field="cargoId"></span>
-	        </div>
-	        <div class="detail-item">
+
+	        <div class="detail-item" data-field-container="requesterCompanyName">
 	            <span class="label">화주</span>
 	            <span class="value" data-field="requesterCompanyName"></span>
 	        </div>
-	                <div class="detail-item">
-            <span class="label">품명</span>
-            <span class="value" data-field="itemName"></span>
-        </div>
+		    <div class="detail-item">
+	            <span class="label">품명</span>
+	            <span class="value" data-field="itemName"></span>
+	        </div>
 	        <div class="detail-item">
 	            <span class="label">요청 마감일</span>
 	            <span class="value" data-field="deadline"></span>
 	        </div>
-	        <div class="detail-item detail-item-price">
+
+	        <div class="detail-item">
+	            <span class="label">CBM</span>
+	            <span class="value" data-field="cbm"></span>
+	        </div>
+	        <div class="detail-item">
+	            <span class="label">사용 컨테이너</span>
+	            <span class="value" data-field="containerId"></span>
+	        </div>
+	        
+	        	        <div class="detail-item detail-item-price">
 	            <div class="price-display">
 	                <span class="label">내 제안 운임</span>
 	                <span class="value" data-field="myOfferPrice"></span>
@@ -189,14 +196,12 @@
 	                <button class="btn btn-sm btn-primary btn-update-offer" style="display: none;">저장</button>
 	            </div>
 	        </div>
-	        <div class="detail-item">
-	            <span class="label">CBM</span>
-	            <span class="value" data-field="cbm"></span>
+	        
+	        <div class="detail-item final-bid-info" style="display: none; grid-column: 1 / -1; background-color: #f8f9fa; padding: 1rem; border-radius: 8px;">
+	            <span class="label" style="font-weight: bold;">최종 낙찰 정보</span>
+	            <span class="value" data-field="finalBidResult"></span>
 	        </div>
-	        <div class="detail-item">
-	            <span class="label">사용 컨테이너</span>
-	            <span class="value" data-field="containerId"></span>
-	        </div>
+        </div>
 	    </div>
 	</template>
     

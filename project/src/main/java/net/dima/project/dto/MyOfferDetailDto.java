@@ -7,13 +7,14 @@ import net.dima.project.entity.OfferEntity;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Optional;
+import net.dima.project.entity.OfferStatus;
 
 @Data
 @Builder
 public class MyOfferDetailDto {
 
     // 화물 정보
-    private Long cargoId;
     private String itemName; // [✅ 이 줄을 추가해주세요]
     private Double cbm;
 
@@ -27,20 +28,44 @@ public class MyOfferDetailDto {
     private BigDecimal myOfferPrice;
     private String myOfferCurrency;
     private String containerId;
+    
+    // [✅ 2. 최종 낙찰 정보를 담을 필드 추가]
+    private BigDecimal finalPrice;
+    private String finalCurrency;
+    private boolean closedWithoutWinner;
 
-    // Entity를 DTO로 변환하는 정적 팩토리 메서드
-    public static MyOfferDetailDto fromEntity(OfferEntity offer) {
+
+    // [✅ 3. fromEntity 메서드를 아래 코드로 교체해주세요]
+    // [✅ 2. fromEntity 메서드를 아래 코드로 교체해주세요]
+    public static MyOfferDetailDto fromEntity(OfferEntity offer, Optional<OfferEntity> winningOfferOpt) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
-        return MyOfferDetailDto.builder()
-                .cargoId(offer.getRequest().getCargo().getCargoId())
+        MyOfferDetailDtoBuilder builder = MyOfferDetailDto.builder()
                 .itemName(offer.getRequest().getCargo().getItemName())
                 .cbm(offer.getRequest().getCargo().getTotalCbm())
-                .requesterCompanyName(offer.getRequest().getRequester().getCompanyName())
                 .deadline(offer.getRequest().getDeadline().format(formatter))
                 .myOfferPrice(offer.getPrice())
                 .myOfferCurrency(offer.getCurrency())
-                .containerId(offer.getContainer().getContainerId())
-                .build();
+                .containerId(offer.getContainer().getContainerId());
+        
+        // [핵심] 제안 상태가 '수락' 또는 '재판매중'일 때만 화주 정보를 DTO에 담습니다.
+        OfferStatus status = offer.getStatus();
+        if (status == OfferStatus.ACCEPTED || status == OfferStatus.FOR_SALE) {
+            builder.requesterCompanyName(offer.getRequest().getRequester().getCompanyName());
+        }
+        
+        // 최종 낙찰 정보를 DTO에 담는 로직
+        winningOfferOpt.ifPresentOrElse(
+            winningOffer -> {
+                builder.finalPrice(winningOffer.getPrice());
+                builder.finalCurrency(winningOffer.getCurrency());
+                builder.closedWithoutWinner(false);
+            },
+            () -> {
+                builder.closedWithoutWinner(true);
+            }
+        );
+
+        return builder.build();
     }
 }

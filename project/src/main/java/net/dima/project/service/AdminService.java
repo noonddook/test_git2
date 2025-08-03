@@ -3,6 +3,7 @@ package net.dima.project.service;
 import lombok.RequiredArgsConstructor;
 import net.dima.project.dto.DashboardMetricsDto;
 import net.dima.project.dto.ForwarderInfoDto;
+import net.dima.project.dto.UserInfoDto;
 import net.dima.project.dto.VolumeDto;
 import net.dima.project.entity.*;
 import net.dima.project.repository.ContainerRepository;
@@ -43,15 +44,43 @@ public class AdminService {
         }).collect(Collectors.toList());
     }
 
-    // [추가] 포워더 승인
+ // [수정] 메서드 전체를 아래 코드로 교체합니다.
     public void updateUserStatus(Integer userSeq, String status) {
         UserEntity user = userRepository.findById(userSeq)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        // 1. 승인 상태(approvalStatus)를 변경합니다.
         user.setApprovalStatus(status);
+
+        // 2. [핵심] 승인 상태에 따라 역할(roles)도 함께 변경합니다.
+        if ("APPROVED".equals(status)) {
+            // "승인 완료" 상태가 되면, 포워더 역할을 부여합니다.
+            user.setRoles("ROLE_fwd");
+        } else if ("SUSPENDED".equals(status) || "REJECTED".equals(status)) {
+            // "계정 정지" 또는 "승인 거절" 상태가 되면,
+            // 모든 기능 접근을 막기 위해 역할을 다시 "승인 대기"로 변경합니다.
+            user.setRoles("ROLE_PENDING");
+        }
+        // "PENDING" 상태로 변경하는 경우는 별도의 역할 변경이 필요 없습니다.
+
         userRepository.save(user);
     }
     
 
+    // [추가] 화주 목록 조회
+    @Transactional(readOnly = true)
+    public List<UserInfoDto> getUserList() {
+        // [수정] "ROLE_cus" 역할을 가진 모든 유저를 조회하도록 변경
+        List<UserEntity> users = userRepository.findByRolesIn(List.of("ROLE_cus"));
+
+        return users.stream().map(user -> {
+            long totalRequests = requestRepository.countByRequester(user);
+            long completedDeals = requestRepository.countByRequesterAndStatus(user, RequestStatus.CLOSED);
+            double totalCbm = requestRepository.sumTotalCbmByRequester(user);
+            return UserInfoDto.from(user, totalRequests, completedDeals, totalCbm);
+        }).collect(Collectors.toList());
+    }
+    
     // [추가] 대시보드 지표 계산 메서드
     @Transactional(readOnly = true)
     public DashboardMetricsDto getDashboardMetrics() {

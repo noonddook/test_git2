@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.dima.project.service.AdminService;
 import net.dima.project.dto.ForwarderInfoDto; // import 추가
+import net.dima.project.dto.UserInfoDto;
 
 
 @Controller
@@ -38,5 +39,14 @@ public class AdminController {
         List<ForwarderInfoDto> forwarderList = adminService.getForwarderList();
         model.addAttribute("forwarderList", forwarderList);
         return "adm/ADM_forwarder_management";
+    }
+    
+    // [추가] 유저(화주) 관리 페이지
+    @GetMapping("/user-management")
+    public String userManagementPage(Model model) {
+        model.addAttribute("activeMenu", "user-management");
+        List<UserInfoDto> userList = adminService.getUserList();
+        model.addAttribute("userList", userList);
+        return "adm/ADM_user_management";
     }
 }

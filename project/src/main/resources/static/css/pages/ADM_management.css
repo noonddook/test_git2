@@ -31,3 +31,5 @@
 .status-badge.suspended { background-color: #e2e3e5; color: #383d41; }
 
 .action-buttons button { margin-right: 5px; }
+/* [추가] '정지' 상태의 뱃지 스타일 */
+.status-badge.suspended { background-color: #e2e3e5; color: #383d41; }

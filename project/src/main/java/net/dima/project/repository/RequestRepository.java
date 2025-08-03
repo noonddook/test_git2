@@ -75,5 +75,15 @@ public interface RequestRepository extends JpaRepository<RequestEntity, Long>, J
     // [추가] 마감일이 임박했는데도 입찰이 없는 요청 수를 세는 메서드
     @Query("SELECT COUNT(r) FROM RequestEntity r WHERE r.status = 'OPEN' AND r.deadline < :deadlineThreshold AND NOT EXISTS (SELECT o FROM OfferEntity o WHERE o.request = r)")
     long countOpenRequestsWithNoBids(@Param("deadlineThreshold") LocalDateTime deadlineThreshold);
+    
+    // [추가] 특정 사용자가 올린 모든 요청 수를 세는 메서드
+    long countByRequester(UserEntity requester);
+
+    // [추가] 특정 사용자의 요청 중 특정 상태인 건의 수를 세는 메서드
+    long countByRequesterAndStatus(UserEntity requester, RequestStatus status);
+
+    // [추가] 특정 사용자가 요청한 모든 화물의 CBM 총합을 구하는 메서드
+    @Query("SELECT COALESCE(SUM(c.totalCbm), 0) FROM RequestEntity r JOIN r.cargo c WHERE r.requester = :requester")
+    double sumTotalCbmByRequester(@Param("requester") UserEntity requester);
 
 }

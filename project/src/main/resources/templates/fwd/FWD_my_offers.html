@@ -63,20 +63,27 @@
 				    <div th:if="${myOffersPage.empty}" class="no-results-message">
 				        조회된 제안 내역이 없습니다.
 				    </div>
-				    <article class="card offer-card" th:each="offer : ${myOffersPage.content}"
-         th:classappend="${offer.isFullySettled} ? 'is-settled' : ''">
-				        <div class="card-summary">
-				            <div class="info">
-				                <span class="request-id-label" th:text="${offer.requestIdLabel}"></span>
-				                <div class="details">
-				                    <span class="incoterms" th:text="${offer.incoterms}"></span>
-				                    <span class="port departure" th:text="${offer.departurePort}"></span>
-				                    <span class="arrow">→</span>
-				                    <span class="port arrival" th:text="${offer.arrivalPort}"></span>
-				                    <span class="request-date" th:text="${offer.departureDate}"></span>
-				                    <span class="cbm" th:text="${#numbers.formatDecimal(offer.cbm, 1, 2)} + ' CBM'"></span>
-				                </div>
-				            </div>
+					<article class="card offer-card" th:each="offer : ${myOffersPage.content}"
+					         th:classappend="${offer.isFullySettled} ? 'is-settled' : ''">
+					    <div class="card-summary">
+					        <div class="info">
+					            <div>
+					                <span class="request-id-label" th:text="${offer.requestIdLabel}"></span>
+					                <span style="font-size: 1.1em; font-weight: 700; margin-left: 10px;" th:text="${offer.itemName}"></span>
+					            </div>
+								<div class="details">
+								    <span class="incoterms" th:text="${offer.incoterms}"></span>
+								    <span class="port departure" th:text="${offer.departurePort}"></span>
+								    <span class="arrow">→</span>
+								    <span class="port arrival" th:text="${offer.arrivalPort}"></span>
+								    
+								    <span class="request-date" th:text="'마감: ' + ${offer.deadlineForDisplay}"></span>
+								    <span th:if="${offer.desiredArrivalDate != null}" 
+								          th:text="'희망도착: ' + ${#temporals.format(offer.desiredArrivalDate, 'yyyy-MM-dd')}"
+								          style="font-weight: 500; color: #007bff; margin-left: 8px;"></span>
+								    <span class="cbm" th:text="${#numbers.formatDecimal(offer.cbm, 1, 2)} + ' CBM'"></span>
+								</div>
+					            </div>
 				            <div class="actions">
 				                <span class="status-badge" th:text="${offer.statusText}" th:classappend="${offer.status.toLowerCase()}"></span>
 				                <th:block th:if="${offer.status.equalsIgnoreCase('ACCEPTED')}">

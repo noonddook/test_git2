@@ -18,6 +18,7 @@ public class RequestCardDto {
     private String incoterms;
     private String departurePort;
     private String arrivalPort;
+    private String registrationDate; // [✅ 1. 이 필드를 추가하세요]
     private String deadline;
     private String desiredArrivalDate;
     private LocalDate desiredArrivalDateAsLocalDate; 
@@ -41,6 +42,7 @@ public class RequestCardDto {
                 .incoterms(entity.getCargo().getIncoterms()) // cargo 엔티티에서 incoterms 가져오기
                 .departurePort(entity.getDeparturePort())
                 .arrivalPort(entity.getArrivalPort())
+                .registrationDate(entity.getCreatedAt().format(DateTimeFormatter.ofPattern("yyyy.MM.dd")))
                 .deadline(entity.getDeadline().format(DateTimeFormatter.ofPattern("yyyy.MM.dd")))
                 .desiredArrivalDate(entity.getDesiredArrivalDate() != null 
                 ? entity.getDesiredArrivalDate().format(DateTimeFormatter.ofPattern("yyyy.MM.dd")) 

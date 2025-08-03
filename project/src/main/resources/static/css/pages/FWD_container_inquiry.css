@@ -4,6 +4,8 @@
     flex-direction: column;
     gap: 24px;
     /* 카드 사이의 간격 */
+    margin-top: 24px;
+    /* 정렬 탭과의 간격을 주기 위해 이 줄을 추가합니다. */
 }
 
 .container-card {

@@ -66,7 +66,7 @@
 			        <input type="hidden" name="departurePort" th:value="${param.departurePort}">
 			        <input type="hidden" name="arrivalPort" th:value="${param.arrivalPort}">
 			        <input type="hidden" name="excludeClosed" th:value="${param.excludeClosed}">
-			        <input type="text" name="itemName" placeholder="품명 검색" th:value="${param.itemName}">
+			        <input type="text" name="itemName" class="form-input" placeholder="품명 검색" th:value="${param.itemName}">
 			        <button type="submit" class="btn btn-primary">조회</button>
 			    </form>
 			</div>
@@ -119,9 +119,12 @@
 				                <span class="incoterms" th:text="${req.incoterms}"></span>
 				                <span class="port departure" th:text="${req.departurePort}"></span>
 				                <span class="arrow">→</span>
+				                
 				                <span class="port arrival" th:text="${req.arrivalPort}"></span>
-				                <span class="deadline" th:text="' ' + ' ' + '  마감: ' + ${req.deadline}"></span>
-				                <span class="desired-arrival" th:text="' 도착희망: ' + ${req.desiredArrivalDate}" style="font-weight: 500; color: #007bff; margin-left: 8px;"></span>
+				                <span class="desired-arrival" th:text="' 도착희망: ' + ${req.desiredArrivalDate}" style="font-weight: 500; color: #007bff; margin-left: 12px;"></span>
+				                <span class="date-info" th:text="'등록: ' + ${req.registrationDate}" style="margin-left: 8px;"></span>
+				                <span class="deadline" th:text="' ' + ' ' + '  마감: ' + ${req.deadline}" style="margin-left: 8px;"></span>
+				                
 				            </div>
 				        </div>
 				        <div class="meta">

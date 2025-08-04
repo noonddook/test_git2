@@ -100,6 +100,7 @@ public class AdminService {
     // [추가] 대시보드 지표 계산 메서드
     @Transactional(readOnly = true)
     public DashboardMetricsDto getDashboardMetrics() {
+    	LocalDateTime now = LocalDateTime.now();
         LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
         LocalDateTime endOfDay = LocalDate.now().atTime(LocalTime.MAX);
         LocalDateTime deadlineThreshold = LocalDateTime.now().plusDays(1); // 마감 1일 전
@@ -112,6 +113,14 @@ public class AdminService {
         long pendingUsers = userRepository.countByRoles("ROLE_PENDING"); // '승인 대기' 역할 기준
         long noBidRequests = requestRepository.countOpenRequestsWithNoBids(deadlineThreshold);
         
+        
+        // [✅ 아래 계산 로직을 추가해주세요]
+        long missedConfirmations = requestRepository.countOpenRequestsWithBidsPastDeadline(now);
+        long totalClosedOrExpired = requestRepository.countTotalClosedOrExpiredRequests(now);
+
+        Double missedConfirmationRate = (totalClosedOrExpired == 0) ? 0.0 :
+                ((double) missedConfirmations / totalClosedOrExpired) * 100;
+
 
         // [추가] SCFI 등락률 계산 로직
         List<ScfiData> latestTwoScfi = scfiDataRepository.findTop2ByOrderByRecordDateDesc();
@@ -145,6 +154,7 @@ public class AdminService {
                 .noBidRequests(noBidRequests)
                 .scfiChangePercentage(scfiChangePercentage) // [추가]
                 .scfiStatus(scfiStatus)                   // [추가]
+                .missedConfirmationRate(missedConfirmationRate)
                 .build();
     }
 

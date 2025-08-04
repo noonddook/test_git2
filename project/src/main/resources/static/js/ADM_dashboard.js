@@ -10,6 +10,9 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('pending-users').textContent = data.pendingUsers;
             document.getElementById('no-bid-requests').textContent = data.noBidRequests;
 			
+			// [✅ 아래 1줄을 추가해주세요]
+			document.getElementById('missed-confirmation-rate').textContent = data.missedConfirmationRate.toFixed(2) + '%';
+			
 			    // [추가] SCFI 신호등 UI 업데이트
 			    const percentageEl = document.getElementById('scfi-percentage');
 			    const messageEl = document.getElementById('scfi-message');

@@ -21,4 +21,7 @@ public class DashboardMetricsDto {
     // [추가] SCFI 분석 정보
     private Double scfiChangePercentage; // 등락률
     private String scfiStatus;           // 상태 (RED, GREEN, NORMAL)
+    
+    // [✅ 아래 필드를 추가해주세요]
+    private Double missedConfirmationRate; // 화주 미확정 마감 비율
 }

@@ -3,46 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <title>SEAIRHUB - B2B 물류 중개 플랫폼</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" th:href="@{/css/base.css}">
-    <style>
-        body { background-color: #fff; }
-        .main-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px 40px;
-            border-bottom: 1px solid #e9ecef;
-        }
-        .main-header .logo img { height: 24px; }
-        .main-header .nav a {
-            margin-left: 20px;
-            text-decoration: none;
-            font-weight: 500;
-            color: #333;
-        }
-        .main-header .nav .btn-primary {
-            background-color: #F86A5A;
-            color: white;
-            padding: 8px 16px;
-            border-radius: 6px;
-        }
-        .hero-section {
-            padding: 80px 40px;
-            text-align: center;
-            background-color: #f8f9fa;
-        }
-        .hero-section h1 { font-size: 42px; margin-bottom: 20px; }
-        .hero-section p { font-size: 18px; color: #666; margin-bottom: 30px; }
-        .btn-quote {
-            background-color: #FC512C;
-            color: white;
-            padding: 14px 28px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-weight: 700;
-            font-size: 16px;
-        }
-    </style>
+    <link rel="stylesheet" th:href="@{/css/pages/index.css}">
 </head>
 <body>
     <header class="main-header">
@@ -66,16 +29,20 @@
         </nav>
     </header>
 
-    <main>
-        <section class="hero-section">
-            <h1>무역 토탈 솔루션 1위, SEAIRHUB</h1>
-            <p>무료로 물류비 견적 받아보고, 나에게 맞는 포워딩사와 업무를 진행해보세요.</p>
-            
-            <a th:href="@{/fwd/fwdRequest}" sec:authorize="hasRole('fwd')" class="btn-quote">무료 물류비 견적받기</a>
-            <a th:href="@{/cus/cusRequest}" sec:authorize="hasRole('cus')" class="btn-quote">무료 물류비 견적받기</a>
-            <a th:href="@{/join}" sec:authorize="isAnonymous()" class="btn-quote">무료 물류비 견적받기</a>
-
-        </section>
-        </main>
+		<main>
+		    <section class="hero-section">
+		        <h1>무역 토탈 솔루션 1위, SEAIRHUB</h1>
+		        <p>무료로 물류비 견적 받아보고, 나에게 맞는 포워딩사와 업무를 진행해보세요.</p>
+		        <a th:href="@{/join}" sec:authorize="isAnonymous()" class="btn-quote">무료 물류비 견적받기</a>
+		    </section>
+		
+		    <section class="chart-section">
+		        <h2>실시간 해상 운임 지수 (SCFI)</h2>
+		        <div class="chart-container">
+		            <canvas id="scfiChart"></canvas>
+		        </div>
+		    </section>
+		</main>
+        <script th:src="@{/js/index-chart.js}"></script>
 </body>
 </html>

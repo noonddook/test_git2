@@ -33,6 +33,7 @@ public class SecurityConfig {
                 "/user/confirmId", "/user/confirmEmail",
                 "/images/**", "/js/**", "/css/**",
                 "/approval-pending" // [추가] 승인 대기 페이지는 모두 접근 가능하도록
+                ,"/api/scfi-data" 
             ).permitAll()
             .requestMatchers("/download/**").authenticated()
             .requestMatchers("/adm/**").hasRole("admin")

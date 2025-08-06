@@ -134,7 +134,12 @@ public class ResaleService {
                         .stream()
                         .filter(o -> o.getStatus() != OfferStatus.PENDING && o.getStatus() != OfferStatus.REJECTED)
                         .findFirst();
-                return MyPostedRequestDto.fromEntity(req, winningOfferOpt);
+                
+                // ⭐ 핵심: 최종 Offer에서 Container 정보를 가져와 DTO를 생성하도록 fromEntity 호출부를 수정합니다.
+                MyPostedRequestDto dto = MyPostedRequestDto.fromEntity(req, winningOfferOpt);
+                // 재판매 요청의 최종 운송 컨테이너의 IMO 번호를 찾기 위해 findFinalOffer 사용
+                findFinalOffer(req).ifPresent(finalOffer -> dto.setImoNumber(finalOffer.getContainer().getImoNumber()));
+                return dto;
             }
         }).collect(Collectors.toList());
 
@@ -222,5 +227,26 @@ public class ResaleService {
                     .build();
             return containerCargoRepository.save(newCargo);
         });
+    }
+    
+    
+ // ResaleService.java 파일 맨 아래에 이 메서드를 추가해주세요. (imo때매 추가)
+    private Optional<OfferEntity> findFinalOffer(RequestEntity request) {
+        Optional<OfferEntity> winningOfferOpt = offerRepository.findAllByRequest(request).stream()
+                .filter(o -> o.getStatus() != OfferStatus.PENDING && o.getStatus() != OfferStatus.REJECTED)
+                .findFirst();
+
+        if (winningOfferOpt.isPresent()) {
+            OfferEntity winningOffer = winningOfferOpt.get();
+            if (winningOffer.getStatus() == OfferStatus.RESOLD) {
+                List<RequestEntity> nextRequests = requestRepository.findBySourceOfferOrderedByCreatedAtDesc(winningOffer);
+                if (!nextRequests.isEmpty()) {
+                    return findFinalOffer(nextRequests.get(0));
+                }
+            } else {
+                return winningOfferOpt;
+            }
+        }
+        return Optional.empty();
     }
 }

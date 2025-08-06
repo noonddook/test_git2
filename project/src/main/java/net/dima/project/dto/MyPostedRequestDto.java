@@ -22,6 +22,8 @@ public class MyPostedRequestDto {
     private String winningBidderCompanyName; // [✅ 추가] 낙찰자 회사 이름
     private String detailedStatus; // [✅ 추가] 낙찰 이후의 상세 진행 상태 (OfferStatus)
     private String detailedStatusText; // [✅ 추가] 화면에 표시될 텍스트
+ // ... MyPostedRequestDto 클래스 안에 아래 필드를 추가해주세요 ...
+    private String imoNumber; // [✅ 이 줄을 추가해주세요]
     private LocalDateTime deadlineDateTime; // [✅ 이 필드를 추가해주세요]
     private LocalDate desiredArrivalDate; // [✅ 이 줄을 추가해주세요]
 

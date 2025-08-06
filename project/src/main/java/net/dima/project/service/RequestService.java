@@ -120,13 +120,16 @@ public class RequestService {
 
         // 3. 필터링된 요청들을 DTO로 변환합니다.
         List<MyPostedRequestDto> dtoList = filteredRequests.stream().map(req -> {
-            // ... (기존 DTO 변환 로직은 동일) ...
             if (req.getStatus() == RequestStatus.OPEN) {
                 long bidderCount = offerRepository.countByRequest(req);
                 return MyPostedRequestDto.fromEntity(req, bidderCount);
             } else {
                 Optional<OfferEntity> finalOfferOpt = findFinalOffer(req);
-                return MyPostedRequestDto.fromEntity(req, finalOfferOpt);
+                
+                // ⭐ 핵심: 최종 Offer에서 Container 정보를 가져와 DTO를 생성하도록 fromEntity 호출부를 수정합니다.
+                MyPostedRequestDto dto = MyPostedRequestDto.fromEntity(req, finalOfferOpt);
+                finalOfferOpt.ifPresent(offer -> dto.setImoNumber(offer.getContainer().getImoNumber())); // IMO 번호 설정
+                return dto;
             }
         }).collect(Collectors.toList());
         

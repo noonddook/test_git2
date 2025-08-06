@@ -350,9 +350,10 @@ public class ContainerService {
     }
     
     @Transactional
-    public void confirmContainer(String containerId, String currentUserId) {
+    public void confirmContainer(String containerId, String currentUserId, String imoNumber) {
         ContainerEntity container = containerRepository.findById(containerId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 컨테이너입니다."));
+        
         // 권한 확인
         if (!container.getForwarder().getUserId().equals(currentUserId)) {
             throw new SecurityException("확정 권한이 없습니다.");
@@ -366,16 +367,18 @@ public class ContainerService {
         }
         
         // 1. 컨테이너 상태를 'CONFIRMED'로 변경
-        container.setStatus(ContainerStatus.CONFIRMED); // [✅ 수정]
+        container.setStatus(ContainerStatus.CONFIRMED);
+        
+        // ⭐ 핵심: 전달받은 IMO 번호를 저장합니다.
+        container.setImoNumber(imoNumber);
 
-        // [✅ 2. 핵심 추가] 이 컨테이너에 속한 'ACCEPTED' 상태의 모든 제안을 'CONFIRMED'로 변경
+        // 2. 이 컨테이너에 속한 'ACCEPTED' 상태의 모든 제안을 'CONFIRMED'로 변경
         for (OfferEntity offer : offers) {
             if (offer.getStatus() == OfferStatus.ACCEPTED) {
                 offer.setStatus(OfferStatus.CONFIRMED);
             }
         }
         
-        // [✅ 아래 코드 추가]
         eventPublisher.publishEvent(new NotificationEvents.ContainerStatusChangedEvent(this, container, "컨테이너가 확정되었습니다."));
     }
     

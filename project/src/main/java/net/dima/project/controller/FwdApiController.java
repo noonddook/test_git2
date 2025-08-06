@@ -218,11 +218,13 @@ public class FwdApiController {
     // [✅ 이 메서드를 수정합니다]
     @PostMapping("/containers/{containerId}/confirm")
     public ResponseEntity<String> confirmContainer(
-            @PathVariable("containerId") String containerId, // [✅ 수정]
+            @PathVariable("containerId") String containerId,
+            @RequestBody Map<String, String> payload, // [수정] RequestBody로 imoNumber를 받습니다.
             Authentication authentication) {
         try {
             String userId = authentication.getName();
-            containerService.confirmContainer(containerId, userId);
+            String imoNumber = payload.get("imoNumber"); // payload에서 imoNumber 추출
+            containerService.confirmContainer(containerId, userId, imoNumber); // 서비스에 전달
             return ResponseEntity.ok("컨테이너가 확정 처리되었습니다. 이제 수정 및 삭제가 불가능합니다.");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());

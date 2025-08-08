@@ -42,6 +42,7 @@ public class NotificationEventListener {
     /**
      * 제안 확정(낙찰/거절) 이벤트를 처리합니다.
      */
+    @Async
     @EventListener
     public void handleOfferConfirmedEvent(OfferConfirmedEvent event) {
         OfferEntity winningOffer = event.getWinningOffer();
@@ -67,6 +68,7 @@ public class NotificationEventListener {
     /**
      * 컨테이너 상태 변경 이벤트를 처리합니다.
      */
+    @Async
     @EventListener
     public void handleContainerStatusChangedEvent(ContainerStatusChangedEvent event) {
         String message = String.format("컨테이너 '%s'의 상태가 변경되었습니다: %s",

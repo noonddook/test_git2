@@ -16,7 +16,6 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -114,17 +113,13 @@ public class NotificationService {
      */
     @Scheduled(fixedRate = 30000)
     public void sendHeartbeat() {
-        // emitters를 복사하여 순회 중 삭제 문제를 방지합니다.
-        new ArrayList<>(emitters.entrySet()).forEach(entry -> {
-            String userId = entry.getKey();
-            SseEmitter emitter = entry.getValue();
+        emitters.forEach((userId, emitter) -> {
             try {
                 emitter.send(SseEmitter.event().name("heartbeat").data("ping"));
             } catch (IOException e) {
-                // 클라이언트 연결이 끊겼을 때 발생하는 정상적인 예외이므로, emitter를 정상 종료합니다.
-                // emitter.complete()는 subscribe 메서드에 정의된 onCompletion 콜백을 트리거하여 emitters 맵에서 제거됩니다.
-                log.warn("Heartbeat failed for user {}, completing emitter.", userId);
-                emitter.complete();
+                // 이 에러는 클라이언트가 브라우저를 닫는 등 정상적으로 연결이 끊어졌을 때 발생하므로, 경고 레벨로 기록합니다.
+                log.warn("Heartbeat failed for user {}, removing emitter.", userId);
+                emitters.remove(userId);
             }
         });
     }

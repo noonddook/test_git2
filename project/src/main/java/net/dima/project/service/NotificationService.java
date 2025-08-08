@@ -51,12 +51,19 @@ public class NotificationService {
 
         // 연결 확인 및 초기 데이터 전송
         sendToClient(userId, "connected", "SSE connection established.");
-        long unreadCount = notificationRepository.countByReceiverAndIsReadFalse(userRepository.findByUserId(userId));
-        sendToClient(userId, "unreadCount", unreadCount);
+        long unreadCount = getUnreadNotificationCount(userId);
+        sendToClient(userId, "unreadCount", String.valueOf(unreadCount));
 
         return emitter;
     }
 
+    // [✅ 핵심 추가] 안 읽은 알림 수를 조회하는 별도의 트랜잭션 메서드
+    @Transactional(readOnly = true)
+    public long getUnreadNotificationCount(String userId) {
+        UserEntity user = userRepository.findByUserId(userId);
+        return notificationRepository.countByReceiverAndIsReadFalse(user);
+    }
+    
     /**
      * [수정] 알림을 DB에 저장하는 트랜잭션과 SSE로 전송하는 네트워크 작업을 분리하여 커넥션 고갈 문제를 해결합니다.
      */
@@ -72,12 +79,15 @@ public class NotificationService {
         notificationRepository.save(notification);
         log.info("SSE: Notification saved for user: {}. Message: {}", receiver.getUserId(), message);
 
-        // [핵심 수정] DB 트랜잭션이 성공적으로 커밋된 '이후에' SSE 메시지를 전송하도록 스케줄링합니다.
-        // 이렇게 하면 네트워크 I/O 동안 DB 커넥션을 점유하지 않습니다.
+        // [✅ 기존 코드 유지] 이 로직은 이미 최적화되어 있습니다.
+        // DB 트랜잭션이 성공적으로 커밋된 '이후에' SSE 메시지를 전송하도록 스케줄링합니다.
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
                 sendToClient(receiver.getUserId(), "notification", NotificationDto.fromEntity(notification));
+                // 안 읽은 알림 개수도 다시 계산해서 보내줍니다.
+                long unreadCount = getUnreadNotificationCount(receiver.getUserId());
+                sendToClient(receiver.getUserId(), "unreadCount", String.valueOf(unreadCount));
             }
         });
     }
@@ -118,7 +128,8 @@ public class NotificationService {
     @Transactional(readOnly = true)
     public List<NotificationDto> getNotifications(String userId) {
         UserEntity user = userRepository.findByUserId(userId);
-        return notificationRepository.findByReceiverOrderByCreatedAtDesc(user)
+        // [✅ 핵심 수정] '안 읽은' 알림만 조회하는 새 레포지토리 메서드를 호출하도록 변경
+        return notificationRepository.findByReceiverAndIsReadFalseOrderByCreatedAtDesc(user)
                 .stream()
                 .map(NotificationDto::fromEntity)
                 .collect(Collectors.toList());

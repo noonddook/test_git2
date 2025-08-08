@@ -53,11 +53,9 @@ public class ResaleService {
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 제안입니다."));
         UserEntity forwarder = userRepository.findByUserId(currentUserId);
 
-        // [✅ 수정] 재판매는 '수락(ACCEPTED)' 상태일 때만 가능
         if (originalOffer.getStatus() != OfferStatus.ACCEPTED) {
             throw new IllegalStateException("'수락(ACCEPTED)' 상태의 제안만 재판매할 수 있습니다.");
         }
-        // [✅ 수정] 컨테이너가 확정되기 전, 즉 'SCHEDULED' 상태일 때만 가능
         if (originalOffer.getContainer().getStatus() != ContainerStatus.SCHEDULED) {
             throw new IllegalStateException("컨테이너가 이미 확정 또는 운송 시작되어 재판매할 수 없습니다.");
         }
@@ -65,7 +63,7 @@ public class ResaleService {
             throw new SecurityException("자신의 제안만 재판매할 수 있습니다.");
         }
 
-        originalOffer.setStatus(OfferStatus.FOR_SALE);
+        originalOffer.setStatus(OfferStatus.FOR_SALE); // 원본 제안 상태 변경
 
         RequestEntity resaleRequest = RequestEntity.builder()
                 .cargo(originalOffer.getRequest().getCargo())
@@ -73,77 +71,98 @@ public class ResaleService {
                 .departurePort(originalOffer.getRequest().getDeparturePort())
                 .arrivalPort(originalOffer.getRequest().getArrivalPort())
                 .deadline(originalOffer.getRequest().getDeadline())
+                .desiredArrivalDate(originalOffer.getRequest().getDesiredArrivalDate())
                 .tradeType(originalOffer.getRequest().getTradeType())
                 .transportType(originalOffer.getRequest().getTransportType())
-                // [✅ 핵심 수정] 원본 요청의 희망 도착일을 그대로 복사합니다.
-                .desiredArrivalDate(originalOffer.getRequest().getDesiredArrivalDate())
                 .status(RequestStatus.OPEN)
                 .sourceOffer(originalOffer)
                 .build();
         requestRepository.save(resaleRequest);
     }
+    
+    /**
+     * [✅ 핵심 수정] 재판매 요청을 수동으로 '취소'하는 기능입니다.
+     * 내부적으로 revertResaleRequest 공통 로직을 호출합니다.
+     */
     @Transactional
     public void cancelResaleRequest(Long requestId, String currentUserId) {
         RequestEntity resaleRequest = requestRepository.findRequestWithDetailsById(requestId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 요청입니다: " + requestId));
-        UserEntity forwarder = userRepository.findByUserId(currentUserId);
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 재판매 요청입니다: " + requestId));
 
-        if (!resaleRequest.getRequester().getUserSeq().equals(forwarder.getUserSeq())) {
+        if (!resaleRequest.getRequester().getUserId().equals(currentUserId)) {
             throw new SecurityException("자신이 등록한 재판매 요청만 취소할 수 있습니다.");
         }
+        if (resaleRequest.getStatus() != RequestStatus.OPEN) {
+            throw new IllegalStateException("진행 중인 재판매 요청만 취소할 수 있습니다.");
+        }
+
+        revertResaleRequest(resaleRequest); // 아래에 정의된 공통 취소/마감 로직 호출
+    }
+
+    
+    /**
+     * [✅ 핵심 추가] 재판매를 되돌리는 공통 로직입니다. (취소 또는 자동 마감 시 사용)
+     * 1. 원본 제안 상태를 'ACCEPTED'로 복원
+     * 2. 재판매 요청에 달린 모든 입찰을 'REJECTED' 처리
+     * 3. 재판매 요청 자체를 'CLOSED' 처리
+     */
+    public void revertResaleRequest(RequestEntity resaleRequest) {
         OfferEntity originalOffer = resaleRequest.getSourceOffer();
         if (originalOffer == null) {
-            throw new IllegalStateException("이 요청은 재판매 요청이 아니므로 취소할 수 없습니다.");
+            // 이럴 가능성은 거의 없지만, 방어 코드를 추가합니다.
+            throw new IllegalStateException("원본 제안이 없는 재판매 요청입니다.");
         }
-
+        
         // 1. 나의 원본 제안 상태를 'ACCEPTED'(수락)로 되돌립니다.
         originalOffer.setStatus(OfferStatus.ACCEPTED);
-        
+
         // 2. 이 재판매 요청에 달린 모든 입찰(Offer)들의 상태를 'REJECTED'(거절)로 변경합니다.
         List<OfferEntity> bidsToCancel = offerRepository.findAllByRequest(resaleRequest);
-        for (OfferEntity bid : bidsToCancel) {
-            bid.setStatus(OfferStatus.REJECTED);
-        }
+        bidsToCancel.forEach(bid -> bid.setStatus(OfferStatus.REJECTED));
 
-        // 3. [✅ 핵심 수정] 재판매 요청을 삭제하는 대신 상태를 'CLOSED'로 변경합니다.
+        // 3. 재판매 요청 자체의 상태를 'CLOSED'로 변경하여 목록에서 숨깁니다.
         resaleRequest.setStatus(RequestStatus.CLOSED);
-        
-        // ※ 참고: @Transactional 환경이므로, 변경된 모든 엔티티(originalOffer, bidsToCancel, resaleRequest)는
-        // 메서드가 끝날 때 자동으로 DB에 저장(UPDATE)됩니다.
     }
     
     
     // [✅ 추가] 나의 재판매 요청 목록 조회
     // [✅ 이 메서드 전체를 아래 코드로 교체해주세요]
- // [✅ 기존 getMyPostedRequests 메서드를 아래의 새로운 코드로 전체 교체해주세요]
-
+    /**
+     * [✅ 핵심 수정] '나의요청조회(재판매 관리)' 페이지의 목록 조회 로직
+     * 'OPEN' 상태인 재판매 요청과, 'CLOSED'이지만 최종 운송 책임이 나에게 있는 건들을 함께 조회합니다.
+     */
     @Transactional(readOnly = true)
     public Page<MyPostedRequestDto> getMyPostedRequests(String currentUserId, String status, Pageable pageable) {
         UserEntity requester = userRepository.findByUserId(currentUserId);
+        
+        // 1. DB에서 내가 올린 모든 재판매 요청을 가져옵니다. (정렬 적용)
+        List<RequestEntity> allMyResaleRequests = requestRepository.findAllByRequesterAndSourceOfferIsNotNull(requester, pageable.getSort());
 
-        // 1. DB에서는 정렬만 적용하여 나의 모든 재판매 요청을 일단 다 가져옵니다.
-        List<RequestEntity> allMyRequests = requestRepository.findAllByRequesterAndSourceOfferIsNotNull(requester, pageable.getSort());
+        // 2. DTO로 변환합니다.
+        List<MyPostedRequestDto> dtoList = allMyResaleRequests.stream()
+            .map(req -> {
+                if (req.getStatus() == RequestStatus.OPEN) {
+                    // 재판매 입찰이 진행 중인 경우
+                    long bidderCount = offerRepository.countByRequest(req);
+                    return MyPostedRequestDto.fromEntity(req, bidderCount);
+                } else { // CLOSED 상태인 경우
+                    Optional<OfferEntity> winningOfferOpt = offerRepository.findWinningOfferForRequest(req);
+                    
+                    // ★★★ 핵심: 낙찰자가 없는 마감된 재판매 건은 DTO로 변환하지 않고 건너뜁니다.
+                    if (winningOfferOpt.isEmpty()) {
+                        return null; 
+                    }
 
-        // 2. 가져온 데이터를 DTO로 변환합니다.
-        List<MyPostedRequestDto> dtoList = allMyRequests.stream().map(req -> {
-            if (req.getStatus() == RequestStatus.OPEN) {
-                long bidderCount = offerRepository.countByRequest(req);
-                return MyPostedRequestDto.fromEntity(req, bidderCount);
-            } else {
-                Optional<OfferEntity> winningOfferOpt = offerRepository.findAllByRequest(req)
-                        .stream()
-                        .filter(o -> o.getStatus() != OfferStatus.PENDING && o.getStatus() != OfferStatus.REJECTED)
-                        .findFirst();
-                
-                // ⭐ 핵심: 최종 Offer에서 Container 정보를 가져와 DTO를 생성하도록 fromEntity 호출부를 수정합니다.
-                MyPostedRequestDto dto = MyPostedRequestDto.fromEntity(req, winningOfferOpt);
-                // 재판매 요청의 최종 운송 컨테이너의 IMO 번호를 찾기 위해 findFinalOffer 사용
-                findFinalOffer(req).ifPresent(finalOffer -> dto.setImoNumber(finalOffer.getContainer().getImoNumber()));
-                return dto;
-            }
-        }).collect(Collectors.toList());
+                    MyPostedRequestDto dto = MyPostedRequestDto.fromEntity(req, winningOfferOpt);
+                    findFinalOffer(req).ifPresent(finalOffer -> dto.setImoNumber(finalOffer.getContainer().getImoNumber()));
+                    return dto;
+                }
+            })
+            // ★★★ 핵심: 변환 결과가 null인 (낙찰자 없는 마감 건) 항목을 리스트에서 최종 제거합니다.
+            .filter(dto -> dto != null)
+            .collect(Collectors.toList());
 
-        // 3. 상태(status) 필터가 있다면, 자바 스트림을 사용해 직접 필터링합니다.
+        // 3. 상태(status) 탭 필터링 로직 (기존과 동일)
         List<MyPostedRequestDto> filteredList;
         if (status != null && !status.isEmpty()) {
             filteredList = dtoList.stream()
@@ -155,16 +174,17 @@ public class ResaleService {
                     })
                     .collect(Collectors.toList());
         } else {
-            filteredList = dtoList; // 필터가 없으면 전체 목록 사용
+            filteredList = dtoList;
         }
 
-        // 4. 필터링된 최종 목록을 가지고 수동으로 페이지네이션 객체를 만듭니다.
+        // 4. 최종 목록으로 페이지네이션 객체를 만듭니다. (기존과 동일)
         int start = (int) pageable.getOffset();
         int end = Math.min((start + pageable.getPageSize()), filteredList.size());
         List<MyPostedRequestDto> pageContent = (start > end) ? List.of() : filteredList.subList(start, end);
         
         return new PageImpl<>(pageContent, pageable, filteredList.size());
     }
+
 
     // [✅ 추가] 특정 재판매 요청에 대한 입찰자 목록 조회
     @Transactional(readOnly = true)

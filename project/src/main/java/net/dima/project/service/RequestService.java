@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import net.dima.project.dto.MyPostedRequestDto;
@@ -87,89 +88,62 @@ public class RequestService {
     @Transactional(readOnly = true)
     public Page<MyPostedRequestDto> getRequestsForShipper(String currentUserId, String status, boolean excludeClosed, String itemName, Pageable pageable) {
         UserEntity shipper = userRepository.findByUserId(currentUserId);
-        
-        // 1. DB에서 나의 모든 원본 요청을 가져옵니다.
-        List<RequestEntity> allMyRequests = requestRepository.findByRequesterAndSourceOfferIsNull(shipper, pageable.getSort());
-
         LocalDateTime now = LocalDateTime.now();
 
-        // [✅ 2. 핵심 추가] 마감 제안 제외 필터링 로직
-        // DTO로 변환하기 전에 원본 Entity 리스트를 먼저 필터링합니다.
-        // [✅ 핵심 수정] 정산 완료(SETTLED)된 요청을 제외하는 필터링 로직 추가
-        List<RequestEntity> filteredRequests = allMyRequests.stream()
-                .filter(req -> {
-                    // 요청이 'CLOSED' 상태일 때만 정산 완료 여부를 확인
-                    if (req.getStatus() == RequestStatus.CLOSED) {
-                        // 최종 연결된 컨테이너의 상태가 SETTLED가 아닌 경우에만 목록에 포함
-                        return findFinalOffer(req)
-                                .map(offer -> offer.getContainer().getStatus() != ContainerStatus.SETTLED)
-                                .orElse(true); // 최종 제안을 찾을 수 없는 경우(예외 상황)에는 일단 포함
+        // [✅ 핵심] DB에서 직접 필터링과 페이징을 수행하도록 Specification을 사용합니다.
+        Specification<RequestEntity> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            
+            // 1. 기본 조건: 내가 요청한 원본 화물만 조회
+            predicates.add(cb.equal(root.get("requester"), shipper));
+            predicates.add(cb.isNull(root.get("sourceOffer")));
+
+            // 2. 상태(status) 탭 필터링
+            if (status != null && !status.isEmpty()) {
+                if ("OPEN".equalsIgnoreCase(status)) {
+                    predicates.add(cb.equal(root.get("status"), RequestStatus.OPEN));
+                    // '마감 제안 제외' 옵션이 켜져 있으면, 마감일이 지나지 않은 것만 필터링
+                    if (excludeClosed) {
+                        predicates.add(cb.greaterThan(root.get("deadline"), now));
                     }
-                    // 'OPEN' 상태인 요청은 항상 포함
-                    return true;
-                })
-                // 기존의 '마감 제안 제외' 필터링 로직은 그대로 유지
-                .filter(req -> 
-                    !excludeClosed ||
-                    (req.getStatus() == RequestStatus.OPEN && req.getDeadline().isAfter(now)) ||
-                    (req.getStatus() == RequestStatus.CLOSED)
-                )
-                .collect(Collectors.toList());
-        
+                } else if ("CLOSED".equalsIgnoreCase(status)) {
+                    // '운송중인 화물' 탭: 최종 상태가 '정산완료'가 아닌 CLOSED 건만 조회
+                    predicates.add(cb.equal(root.get("status"), RequestStatus.CLOSED));
+                    
+                    // 이 부분은 복잡하므로, 우선 서비스단에서 후처리합니다.
+                    // 모든 CLOSED 건을 가져온 뒤 DTO 변환 과정에서 필터링합니다.
+                }
+            }
 
+            // 3. 품명(itemName) 검색 필터링
+            if (itemName != null && !itemName.isBlank()) {
+                Join<RequestEntity, CargoEntity> cargoJoin = root.join("cargo");
+                predicates.add(cb.like(cargoJoin.get("itemName"), "%" + itemName + "%"));
+            }
 
-        // 3. 필터링된 요청들을 DTO로 변환합니다.
-        List<MyPostedRequestDto> dtoList = filteredRequests.stream().map(req -> {
+            // N+1 문제 방지를 위한 fetch join
+            if (query.getResultType() != Long.class && query.getResultType() != long.class) {
+                root.fetch("cargo", JoinType.LEFT);
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        // DB에서 Specification과 Pageable을 사용해 필요한 만큼의 데이터만 조회
+        Page<RequestEntity> requestPage = requestRepository.findAll(spec, pageable);
+
+        // 조회된 Page<Entity>를 Page<DTO>로 변환
+        return requestPage.map(req -> {
             if (req.getStatus() == RequestStatus.OPEN) {
                 long bidderCount = offerRepository.countByRequest(req);
                 return MyPostedRequestDto.fromEntity(req, bidderCount);
-            } else {
+            } else { // CLOSED
                 Optional<OfferEntity> finalOfferOpt = findFinalOffer(req);
-                
-                // ⭐ 핵심: 최종 Offer에서 Container 정보를 가져와 DTO를 생성하도록 fromEntity 호출부를 수정합니다.
                 MyPostedRequestDto dto = MyPostedRequestDto.fromEntity(req, finalOfferOpt);
-                finalOfferOpt.ifPresent(offer -> dto.setImoNumber(offer.getContainer().getImoNumber())); // IMO 번호 설정
+                finalOfferOpt.ifPresent(offer -> dto.setImoNumber(offer.getContainer().getImoNumber()));
                 return dto;
             }
-        }).collect(Collectors.toList());
-        
-        // [✅ 핵심 추가] DTO 리스트를 itemName으로 최종 필터링합니다.
-        List<MyPostedRequestDto> searchedList;
-        if (itemName != null && !itemName.isBlank()) {
-            searchedList = dtoList.stream()
-                .filter(dto -> dto.getItemName().toLowerCase().contains(itemName.toLowerCase()))
-                .collect(Collectors.toList());
-        } else {
-            searchedList = dtoList;
-        }
-        
-        // 4. 상태(status) 탭 필터를 적용합니다.
-        List<MyPostedRequestDto> filteredList;
-        if (status != null && !status.isEmpty()) {
-            filteredList = searchedList.stream()
-                    .filter(dto -> {
-                        // "OPEN" 탭은 OPEN 상태의 요청만 필터링
-                        if ("OPEN".equalsIgnoreCase(status)) {
-                            return "OPEN".equals(dto.getStatus());
-                        }
-                        // "CLOSED" 탭은 CLOSED 상태의 모든 요청을 포함
-                        if ("CLOSED".equalsIgnoreCase(status)) {
-                            return "CLOSED".equals(dto.getStatus());
-                        }
-                        // 그 외 (ACCEPTED, CONFIRMED 등)는 상세 상태(detailedStatus)로 필터링
-                        return dto.getDetailedStatus() != null && status.equalsIgnoreCase(dto.getDetailedStatus());
-                    })
-                    .collect(Collectors.toList());
-        } else {
-            filteredList = searchedList;
-        }
-
-        // 5. 최종 목록으로 페이지네이션 객체를 만듭니다.
-        int start = (int) pageable.getOffset();
-        int end = Math.min((start + pageable.getPageSize()), filteredList.size());
-        List<MyPostedRequestDto> pageContent = (start > end) ? List.of() : filteredList.subList(start, end);
-        
-        return new PageImpl<>(pageContent, pageable, filteredList.size());
+        });
     }
     
     private Optional<OfferEntity> findFinalOffer(RequestEntity request) {

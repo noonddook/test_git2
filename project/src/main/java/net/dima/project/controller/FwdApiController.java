@@ -202,9 +202,10 @@ public class FwdApiController {
     
     // [✅ 추가] 컨테이너 삭제 API
     // [✅ 이 메서드를 수정합니다]
+ // [✅ 이 메서드를 수정합니다]
     @DeleteMapping("/containers/{containerId}")
     public ResponseEntity<String> deleteContainer(
-            @PathVariable("containerId") String containerId, // [✅ 수정]
+            @PathVariable("containerId") String containerId, // [✅ 수정] Long -> String
             Authentication authentication) {
         try {
             String userId = authentication.getName();

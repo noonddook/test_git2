@@ -1,6 +1,7 @@
 package net.dima.project.service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
@@ -34,6 +35,7 @@ import java.util.ArrayList; // [✅ import 추가]
 import jakarta.persistence.criteria.Predicate; // [✅ import 추가]
 import jakarta.persistence.criteria.Root; // [✅ import 추가]
 import org.springframework.context.ApplicationEventPublisher; 
+import java.util.Collections; // Collections import 추가
 
 @Service
 @RequiredArgsConstructor
@@ -131,38 +133,40 @@ public class ResaleService {
      * [✅ 핵심 수정] '나의요청조회(재판매 관리)' 페이지의 목록 조회 로직
      * 'OPEN' 상태인 재판매 요청과, 'CLOSED'이지만 최종 운송 책임이 나에게 있는 건들을 함께 조회합니다.
      */
+    // ▼▼▼ getMyPostedRequests 메서드 전체를 아래 코드로 교체해주세요 ▼▼▼
     @Transactional(readOnly = true)
     public Page<MyPostedRequestDto> getMyPostedRequests(String currentUserId, String status, Pageable pageable) {
         UserEntity requester = userRepository.findByUserId(currentUserId);
         
-        // 1. DB에서 내가 올린 모든 재판매 요청을 가져옵니다. (정렬 적용)
+        // 1. 내가 올린 모든 재판매 요청을 가져옵니다.
         List<RequestEntity> allMyResaleRequests = requestRepository.findAllByRequesterAndSourceOfferIsNotNull(requester, pageable.getSort());
 
-        // 2. DTO로 변환합니다.
+        // 2. 각 요청을 DTO로 변환하되, 최종 정산이 완료된 건은 제외합니다.
         List<MyPostedRequestDto> dtoList = allMyResaleRequests.stream()
             .map(req -> {
+                // 최종 운송사와 그 제안 정보를 찾아옵니다.
+                Optional<OfferEntity> finalOfferOpt = findFinalOffer(req);
+
+                // ★★★ 핵심 수정 ★★★
+                // 최종 운송사가 정산을 완료했다면(ContainerStatus.SETTLED), 목록에 표시하지 않기 위해 null을 반환합니다.
+                if (finalOfferOpt.isPresent() && finalOfferOpt.get().getContainer().getStatus() == ContainerStatus.SETTLED) {
+                    return null;
+                }
+
                 if (req.getStatus() == RequestStatus.OPEN) {
-                    // 재판매 입찰이 진행 중인 경우
                     long bidderCount = offerRepository.countByRequest(req);
                     return MyPostedRequestDto.fromEntity(req, bidderCount);
-                } else { // CLOSED 상태인 경우
+                } else { // CLOSED
                     Optional<OfferEntity> winningOfferOpt = offerRepository.findWinningOfferForRequest(req);
-                    
-                    // ★★★ 핵심: 낙찰자가 없는 마감된 재판매 건은 DTO로 변환하지 않고 건너뜁니다.
-                    if (winningOfferOpt.isEmpty()) {
-                        return null; 
-                    }
-
                     MyPostedRequestDto dto = MyPostedRequestDto.fromEntity(req, winningOfferOpt);
-                    findFinalOffer(req).ifPresent(finalOffer -> dto.setImoNumber(finalOffer.getContainer().getImoNumber()));
+                    finalOfferOpt.ifPresent(finalOffer -> dto.setImoNumber(finalOffer.getContainer().getImoNumber()));
                     return dto;
                 }
             })
-            // ★★★ 핵심: 변환 결과가 null인 (낙찰자 없는 마감 건) 항목을 리스트에서 최종 제거합니다.
-            .filter(dto -> dto != null)
+            .filter(dto -> dto != null) // 정산완료되어 null이 된 항목들을 리스트에서 최종 제거합니다.
             .collect(Collectors.toList());
 
-        // 3. 상태(status) 탭 필터링 로직 (기존과 동일)
+        // 3. 상태(status) 탭 필터링 및 페이지네이션 (기존 로직과 동일)
         List<MyPostedRequestDto> filteredList;
         if (status != null && !status.isEmpty()) {
             filteredList = dtoList.stream()
@@ -177,13 +181,14 @@ public class ResaleService {
             filteredList = dtoList;
         }
 
-        // 4. 최종 목록으로 페이지네이션 객체를 만듭니다. (기존과 동일)
         int start = (int) pageable.getOffset();
         int end = Math.min((start + pageable.getPageSize()), filteredList.size());
-        List<MyPostedRequestDto> pageContent = (start > end) ? List.of() : filteredList.subList(start, end);
+        List<MyPostedRequestDto> pageContent = (start >= filteredList.size()) ? Collections.emptyList() : filteredList.subList(start, end);
         
         return new PageImpl<>(pageContent, pageable, filteredList.size());
     }
+    
+    
 
 
     // [✅ 추가] 특정 재판매 요청에 대한 입찰자 목록 조회
@@ -227,7 +232,7 @@ public class ResaleService {
         // [✅ 아래 코드 추가]
         eventPublisher.publishEvent(new NotificationEvents.OfferConfirmedEvent(this, allBids, winningOffer));
         
-        chatService.createChatRoomForOffer(winningOffer);
+//        chatService.createChatRoomForOffer(winningOffer);
 
         // [✅ 5. 핵심 수정] 나의 컨테이너에서 화물(CBM) 제거 로직 보강
         // findByOfferOfferId로 데이터를 찾되, 만약 없더라도 오류를 발생시키지 않고 넘어갑니다.=
@@ -252,21 +257,28 @@ public class ResaleService {
     
  // ResaleService.java 파일 맨 아래에 이 메서드를 추가해주세요. (imo때매 추가)
     private Optional<OfferEntity> findFinalOffer(RequestEntity request) {
-        Optional<OfferEntity> winningOfferOpt = offerRepository.findAllByRequest(request).stream()
-                .filter(o -> o.getStatus() != OfferStatus.PENDING && o.getStatus() != OfferStatus.REJECTED)
-                .findFirst();
+        RequestEntity currentRequest = request;
+        while (true) {
+            Optional<OfferEntity> winningOfferOpt = offerRepository.findAllByRequest(currentRequest)
+                    .stream()
+                    .filter(o -> o.getStatus() != OfferStatus.PENDING && o.getStatus() != OfferStatus.REJECTED)
+                    .findFirst();
 
-        if (winningOfferOpt.isPresent()) {
-            OfferEntity winningOffer = winningOfferOpt.get();
-            if (winningOffer.getStatus() == OfferStatus.RESOLD) {
-                List<RequestEntity> nextRequests = requestRepository.findBySourceOfferOrderedByCreatedAtDesc(winningOffer);
-                if (!nextRequests.isEmpty()) {
-                    return findFinalOffer(nextRequests.get(0));
+            if (winningOfferOpt.isPresent()) {
+                OfferEntity winningOffer = winningOfferOpt.get();
+                if (winningOffer.getStatus() == OfferStatus.RESOLD) {
+                    List<RequestEntity> nextRequests = requestRepository.findBySourceOfferOrderedByCreatedAtDesc(winningOffer);
+                    if (!nextRequests.isEmpty()) {
+                        currentRequest = nextRequests.get(0);
+                    } else {
+                        return winningOfferOpt;
+                    }
+                } else {
+                    return winningOfferOpt;
                 }
             } else {
-                return winningOfferOpt;
+                return Optional.empty();
             }
         }
-        return Optional.empty();
     }
 }

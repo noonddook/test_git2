@@ -75,6 +75,7 @@ public class ContainerService {
         List<ContainerStatusDto> dtos = myContainers.stream().map(container -> {
             ContainerStatusDto dto = ContainerStatusDto.fromEntity(container);
             List<OfferEntity> offers = offersByContainerId.getOrDefault(container.getContainerId(), new ArrayList<>());
+
             
             // ... (기존 CBM 계산 로직은 그대로) ...
             double confirmedCbmFromOffers = offers.stream()

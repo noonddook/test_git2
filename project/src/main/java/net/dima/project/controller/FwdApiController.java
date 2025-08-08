@@ -170,11 +170,12 @@ public class FwdApiController {
     @PostMapping("/my-posted-requests/{requestId}/confirm")
     public ResponseEntity<String> confirmBid(
             @PathVariable("requestId") Long requestId,
-            @RequestBody Map<String, Long> payload, 
+            @RequestBody Map<String, Long> payload,
             Authentication authentication) {
         try {
             String userId = authentication.getName();
-            Long winningOfferId = payload.get("offerId");
+            // 여기를 수정합니다.
+            Long winningOfferId = payload.get("winningOfferId");
             if (winningOfferId == null) {
                 return ResponseEntity.badRequest().body("winningOfferId가 필요합니다.");
             }

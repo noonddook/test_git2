@@ -2,6 +2,7 @@ package net.dima.project.service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
@@ -36,6 +37,7 @@ import jakarta.persistence.criteria.Predicate; // [✅ import 추가]
 import jakarta.persistence.criteria.Root; // [✅ import 추가]
 import org.springframework.context.ApplicationEventPublisher; 
 import java.util.Collections; // Collections import 추가
+import jakarta.persistence.criteria.JoinType;
 
 @Service
 @RequiredArgsConstructor
@@ -137,56 +139,69 @@ public class ResaleService {
     @Transactional(readOnly = true)
     public Page<MyPostedRequestDto> getMyPostedRequests(String currentUserId, String status, Pageable pageable) {
         UserEntity requester = userRepository.findByUserId(currentUserId);
-        
-        // 1. 내가 올린 모든 재판매 요청을 가져옵니다.
-        List<RequestEntity> allMyResaleRequests = requestRepository.findAllByRequesterAndSourceOfferIsNotNull(requester, pageable.getSort());
 
-        // 2. 각 요청을 DTO로 변환하되, 최종 정산이 완료된 건은 제외합니다.
-        List<MyPostedRequestDto> dtoList = allMyResaleRequests.stream()
+        // 1. DB에서 페이징을 적용하여 필요한 만큼의 재판매 요청만 가져옵니다.
+        Specification<RequestEntity> spec = (root, query, cb) -> {
+            query.distinct(true);
+            root.fetch("cargo", JoinType.LEFT);
+            Predicate p = cb.and(
+                cb.equal(root.get("requester"), requester),
+                cb.isNotNull(root.get("sourceOffer"))
+            );
+            if (status != null && !status.isEmpty()) {
+                 if ("OPEN".equalsIgnoreCase(status)) {
+                    p = cb.and(p, cb.equal(root.get("status"), RequestStatus.OPEN));
+                 }
+                 // CLOSED 상태는 후처리 필터링을 위해 spec에서는 제외
+            }
+            return p;
+        };
+        Page<RequestEntity> myRequestsPage = requestRepository.findAll(spec, pageable);
+        List<RequestEntity> requestsOnPage = myRequestsPage.getContent();
+
+        if (requestsOnPage.isEmpty()) {
+            return Page.empty(pageable);
+        }
+
+        // 2. N+1 문제 해결을 위한 일괄 조회
+        List<RequestEntity> openRequests = requestsOnPage.stream().filter(r -> r.getStatus() == RequestStatus.OPEN).collect(Collectors.toList());
+        Map<Long, Long> offerCounts = offerRepository.countOffersByRequestIn(openRequests).stream()
+            .collect(Collectors.toMap(arr -> (Long)arr[0], arr -> (Long)arr[1]));
+
+        List<RequestEntity> closedRequests = requestsOnPage.stream().filter(r -> r.getStatus() == RequestStatus.CLOSED).collect(Collectors.toList());
+        Map<Long, Optional<OfferEntity>> winningOffersMap = offerRepository.findWinningOffersForRequests(closedRequests).stream()
+            .collect(Collectors.toMap(o -> o.getRequest().getRequestId(), Optional::ofNullable));
+        Map<Long, Optional<OfferEntity>> finalOffersMap = closedRequests.stream()
+            .collect(Collectors.toMap(RequestEntity::getRequestId, this::findFinalOffer));
+
+        // 3. 메모리에서 DTO 변환 및 상태 필터링, '정산완료' 건 필터링
+        List<MyPostedRequestDto> dtoList = requestsOnPage.stream()
             .map(req -> {
-                // 최종 운송사와 그 제안 정보를 찾아옵니다.
-                Optional<OfferEntity> finalOfferOpt = findFinalOffer(req);
-
-                // ★★★ 핵심 수정 ★★★
-                // 최종 운송사가 정산을 완료했다면(ContainerStatus.SETTLED), 목록에 표시하지 않기 위해 null을 반환합니다.
-                if (finalOfferOpt.isPresent() && finalOfferOpt.get().getContainer().getStatus() == ContainerStatus.SETTLED) {
-                    return null;
+                Optional<OfferEntity> finalOfferOpt = finalOffersMap.getOrDefault(req.getRequestId(), Optional.empty());
+                if(finalOfferOpt.isPresent() && finalOfferOpt.get().getContainer().getStatus() == ContainerStatus.SETTLED) {
+                    return null; // 정산완료 건 제외
                 }
 
                 if (req.getStatus() == RequestStatus.OPEN) {
-                    long bidderCount = offerRepository.countByRequest(req);
-                    return MyPostedRequestDto.fromEntity(req, bidderCount);
+                    return MyPostedRequestDto.fromEntity(req, offerCounts.getOrDefault(req.getRequestId(), 0L));
                 } else { // CLOSED
-                    Optional<OfferEntity> winningOfferOpt = offerRepository.findWinningOfferForRequest(req);
+                    Optional<OfferEntity> winningOfferOpt = winningOffersMap.getOrDefault(req.getRequestId(), Optional.empty());
                     MyPostedRequestDto dto = MyPostedRequestDto.fromEntity(req, winningOfferOpt);
                     finalOfferOpt.ifPresent(finalOffer -> dto.setImoNumber(finalOffer.getContainer().getImoNumber()));
                     return dto;
                 }
             })
-            .filter(dto -> dto != null) // 정산완료되어 null이 된 항목들을 리스트에서 최종 제거합니다.
+            .filter(Objects::nonNull)
+            .filter(dto -> { // status 탭 필터링
+                if (status == null || status.isEmpty()) return true;
+                if ("OPEN".equalsIgnoreCase(status)) return "OPEN".equals(dto.getStatus());
+                return status.equalsIgnoreCase(dto.getDetailedStatus());
+            })
             .collect(Collectors.toList());
-
-        // 3. 상태(status) 탭 필터링 및 페이지네이션 (기존 로직과 동일)
-        List<MyPostedRequestDto> filteredList;
-        if (status != null && !status.isEmpty()) {
-            filteredList = dtoList.stream()
-                    .filter(dto -> {
-                        if ("OPEN".equalsIgnoreCase(status)) {
-                            return "OPEN".equals(dto.getStatus());
-                        }
-                        return dto.getDetailedStatus() != null && status.equalsIgnoreCase(dto.getDetailedStatus());
-                    })
-                    .collect(Collectors.toList());
-        } else {
-            filteredList = dtoList;
-        }
-
-        int start = (int) pageable.getOffset();
-        int end = Math.min((start + pageable.getPageSize()), filteredList.size());
-        List<MyPostedRequestDto> pageContent = (start >= filteredList.size()) ? Collections.emptyList() : filteredList.subList(start, end);
         
-        return new PageImpl<>(pageContent, pageable, filteredList.size());
+        return new PageImpl<>(dtoList, pageable, myRequestsPage.getTotalElements());
     }
+
     
     
 

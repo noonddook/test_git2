@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -95,66 +94,59 @@ public class RequestService {
         UserEntity shipper = userRepository.findByUserId(currentUserId);
         LocalDateTime now = LocalDateTime.now();
 
-        // 1. [핵심] DB에서 처음부터 페이징을 적용하여 딱 필요한 만큼의 데이터만 가져옵니다.
+        // 1. DB에서 필터링할 초기 후보군을 조회합니다. (여기서는 페이징을 적용하지 않습니다)
         Specification<RequestEntity> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             predicates.add(cb.equal(root.get("requester"), shipper));
             predicates.add(cb.isNull(root.get("sourceOffer")));
-
-            if (status != null && !status.isEmpty()) {
-                if ("CLOSED".equalsIgnoreCase(status)) {
-                    predicates.add(cb.equal(root.get("status"), RequestStatus.CLOSED));
-                } else if ("OPEN".equalsIgnoreCase(status)) {
-                    predicates.add(cb.equal(root.get("status"), RequestStatus.OPEN));
-                    if (excludeClosed) {
-                        predicates.add(cb.greaterThan(root.get("deadline"), now));
-                    }
-                }
-            }
-
             if (itemName != null && !itemName.isBlank()) {
-                root.fetch("cargo", JoinType.LEFT);
-                predicates.add(cb.like(root.get("cargo").get("itemName"), "%" + itemName + "%"));
+                Join<RequestEntity, CargoEntity> cargoJoin = root.join("cargo");
+                predicates.add(cb.like(cargoJoin.get("itemName"), "%" + itemName + "%"));
             }
-            query.distinct(true);
             return cb.and(predicates.toArray(new Predicate[0]));
         };
-        Page<RequestEntity> requestPage = requestRepository.findAll(spec, pageable);
-        List<RequestEntity> requestsOnPage = requestPage.getContent();
+        List<RequestEntity> allRequests = requestRepository.findAll(spec, pageable.getSort());
 
-        if (requestsOnPage.isEmpty()) {
-            return Page.empty(pageable);
-        }
+        // 2. Stream을 사용하여 메모리에서 상세 필터링을 수행합니다.
+        Stream<RequestEntity> requestStream = allRequests.stream();
 
-        // 2. N+1 문제 해결: 현재 페이지에 필요한 모든 추가 정보를 '일괄 조회'합니다.
-        List<RequestEntity> openRequests = requestsOnPage.stream().filter(r -> r.getStatus() == RequestStatus.OPEN).collect(Collectors.toList());
-        Map<Long, Long> offerCounts = offerRepository.countOffersByRequestIn(openRequests).stream()
-                .collect(Collectors.toMap(arr -> (Long) arr[0], arr -> (Long) arr[1]));
-
-        List<RequestEntity> closedRequests = requestsOnPage.stream().filter(r -> r.getStatus() == RequestStatus.CLOSED).collect(Collectors.toList());
-        Map<Long, Optional<OfferEntity>> directOffersMap = offerRepository.findWinningOffersForRequests(closedRequests).stream()
-                .collect(Collectors.toMap(o -> o.getRequest().getRequestId(), Optional::ofNullable));
-        Map<Long, Optional<OfferEntity>> finalOffersMap = closedRequests.stream()
-                .collect(Collectors.toMap(RequestEntity::getRequestId, this::findFinalOffer));
-
-        // 3. 메모리에서 DTO를 만들면서 '정산완료' 건을 최종적으로 필터링합니다.
-        List<MyPostedRequestDto> dtoList = requestsOnPage.stream()
-            .map(req -> {
-                if (req.getStatus() == RequestStatus.OPEN) {
-                    return MyPostedRequestDto.fromEntity(req, offerCounts.getOrDefault(req.getRequestId(), 0L));
-                } else { // CLOSED
-                    Optional<OfferEntity> finalOfferOpt = finalOffersMap.getOrDefault(req.getRequestId(), Optional.empty());
-                    if (finalOfferOpt.isPresent() && finalOfferOpt.get().getContainer().getStatus() == ContainerStatus.SETTLED) {
-                        return null; // 정산완료 건은 목록에서 제외
-                    }
-                    Optional<OfferEntity> directOfferOpt = directOffersMap.getOrDefault(req.getRequestId(), Optional.empty());
-                    return MyPostedRequestDto.fromEntity(req, directOfferOpt, finalOfferOpt);
+        // 2-1. '운송중인 화물' 탭인 경우 (status="CLOSED" 또는 status=null)
+        if (status == null || "CLOSED".equalsIgnoreCase(status)) {
+            requestStream = requestStream.filter(req -> {
+                if (req.getStatus() == RequestStatus.CLOSED) {
+                    // 최종 운송 상태를 확인
+                    Optional<OfferEntity> finalOfferOpt = findFinalOffer(req);
+                    // 최종 제안이 존재하고, 그 컨테이너 상태가 '정산완료'가 아닐 때만 목록에 포함
+                    return finalOfferOpt.map(o -> o.getContainer().getStatus() != ContainerStatus.SETTLED).orElse(true);
                 }
-            })
-            .filter(Objects::nonNull)
-            .collect(Collectors.toList());
+                return false; // OPEN 상태의 요청은 이 탭에 표시하지 않음
+            });
+        }
+        // 2-2. '나의요청 관리' 탭인 경우 (status="OPEN")
+        else if ("OPEN".equalsIgnoreCase(status)) {
+            requestStream = requestStream.filter(req -> req.getStatus() == RequestStatus.OPEN);
+            if (excludeClosed) {
+                requestStream = requestStream.filter(req -> req.getDeadline().isAfter(now));
+            }
+        }
+        
+        List<MyPostedRequestDto> dtoList = requestStream.map(req -> {
+            if (req.getStatus() == RequestStatus.OPEN) {
+                long bidderCount = offerRepository.countByRequest(req);
+                return MyPostedRequestDto.fromEntity(req, bidderCount);
+            } else { // CLOSED
+                Optional<OfferEntity> directWinningOfferOpt = offerRepository.findWinningOfferForRequest(req);
+                Optional<OfferEntity> finalOfferInChainOpt = findFinalOffer(req);
+                return MyPostedRequestDto.fromEntity(req, directWinningOfferOpt, finalOfferInChainOpt);
+            }
+        }).collect(Collectors.toList());
+        
+        // 3. 필터링된 최종 리스트를 기준으로 수동으로 페이징 처리합니다.
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), dtoList.size());
+        List<MyPostedRequestDto> pageContent = (start >= dtoList.size()) ? Collections.emptyList() : dtoList.subList(start, end);
 
-        return new PageImpl<>(dtoList, pageable, requestPage.getTotalElements());
+        return new PageImpl<>(pageContent, pageable, dtoList.size());
     }
     
     private Optional<OfferEntity> findFinalOffer(RequestEntity request) {

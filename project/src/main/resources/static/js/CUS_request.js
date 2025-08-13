@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		// [✅ 수정] 출발/도착항 선택 연동 로직
 		const departurePortSelect = document.getElementById('departurePort');
 		const arrivalPortSelect = document.getElementById('arrivalPort');
+		const tradeTypeInput = document.getElementById('tradeType'); // 추가
 
         const portGroups = {
             '인천': 'KR', '부산': 'KR',
@@ -53,9 +54,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 		    }
 		};
+		
+		const updateTradeType = () => {
+		    const selectedDeparture = departurePortSelect.value;
+		    if (selectedDeparture === '인천' || selectedDeparture === '부산') {
+		        tradeTypeInput.value = '수출';
+		    } else if (selectedDeparture) { // 인천, 부산 외 다른 항구가 선택되었을 때
+		        tradeTypeInput.value = '수입';
+		    } else {
+		        tradeTypeInput.value = ''; // 아무것도 선택되지 않았을 때
+		    }
+		};
 
 		// 각 드롭다운 메뉴에 변경 이벤트가 발생할 때마다 함수를 호출
-		departurePortSelect.addEventListener('change', updatePortOptions);
+		departurePortSelect.addEventListener('change', () => {
+		    updatePortOptions();
+		    updateTradeType(); // 출발항 변경 시 무역 유형 업데이트 함수 호출
+		});
 		arrivalPortSelect.addEventListener('change', updatePortOptions);
 		
 		
